@@ -1,10 +1,7 @@
 package iuh.fit.backend.identity.controller;
 
 import com.nimbusds.jose.JOSEException;
-import iuh.fit.backend.identity.dto.request.ApiResponse;
-import iuh.fit.backend.identity.dto.request.AuthenticationRequest;
-import iuh.fit.backend.identity.dto.request.IntrospectRequest;
-import iuh.fit.backend.identity.dto.request.LogoutRequest;
+import iuh.fit.backend.identity.dto.request.*;
 import iuh.fit.backend.identity.dto.response.AuthenticationResponse;
 import iuh.fit.backend.identity.dto.response.IntrospectResponse;
 import iuh.fit.backend.identity.service.AuthenticationService;
@@ -36,6 +33,14 @@ public class AuthenticationController {
     ApiResponse<IntrospectResponse> authenticationResponseApiResponse(@RequestBody IntrospectRequest request) throws ParseException, JOSEException {
         var result =  authenticationService.introspect(request);
         return ApiResponse.<IntrospectResponse>builder()
+                .result(result)
+                .build();
+    }
+    @PostMapping("/refresh")
+    ApiResponse<AuthenticationResponse> authenticate(@RequestBody RefreshRequest request)
+            throws ParseException, JOSEException {
+        var result = authenticationService.refreshToken(request);
+        return ApiResponse.<AuthenticationResponse>builder()
                 .result(result)
                 .build();
     }
