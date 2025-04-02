@@ -8,7 +8,9 @@ import java.time.LocalDate;
 import java.util.Set;
 
 @Entity
-@Data
+@Getter
+@Setter
+//@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,10 +21,25 @@ public class User {
     String id;
     String username;
     String password;
+    String studentCode;
     String firstName;
     String lastName;
     LocalDate dob;
 //    @ElementCollection
     @ManyToMany
     Set<Role> roles;
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        User user = (User) o;
+        return id != null && id.equals(user.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

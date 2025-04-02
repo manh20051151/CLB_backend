@@ -18,11 +18,10 @@ public class UserCreateRequest {
     String username;
     @Size(min = 8, message = "PASSWORD_INVALID")
     String password;
+    String studentCode;
     String firstName;
     String lastName;
 
     @DobConstraint(min = 10, message = "INVALID_DOB")
     LocalDate dob;
-
-
 }

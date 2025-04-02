@@ -16,6 +16,21 @@ public enum ErrorCode {
     UNAUTHORIZED(1007,"Không có quyền", HttpStatus.FORBIDDEN),
     INVALID_DOB(1008,"'Your age must be at least {min}", HttpStatus.BAD_REQUEST),
 
+
+    EVENT_NOT_FOUND(2001, "Sự kiện không tồn tại", HttpStatus.NOT_FOUND),
+    USER_NOT_FOUND(2002, "Người dùng không tồn tại", HttpStatus.NOT_FOUND),
+    INVALID_EVENT_NAME(2003, "Tên sự kiện có ít nhất {min} ký tự", HttpStatus.BAD_REQUEST),
+    INVALID_EVENT_PURPOSE(2004, "Mục đích sự kiện có ít nhất {min} ký tự", HttpStatus.BAD_REQUEST),
+    INVALID_EVENT_CONTENT(2005, "Nội dung sự kiện có ít nhất {min} ký tự", HttpStatus.BAD_REQUEST),
+
+    //Mã lỗi cho OrganizerRole
+    ROLE_ALREADY_EXISTS(3001, "vai trò của người tổ chức đã tồn tại", HttpStatus.BAD_REQUEST),
+    ROLE_NOT_FOUND(3002, "vai trò của người tổ chức không tồn tại", HttpStatus.NOT_FOUND),
+
+    // Mã lỗi cho Position
+    POSITION_ALREADY_EXISTS(3003, "chức vụ đã tồn tại", HttpStatus.BAD_REQUEST),
+    POSITION_NOT_FOUND(3004, "chức vụ không tồn tại", HttpStatus.NOT_FOUND),
+    ATTENDEE_NOT_FOUND(3005, "người tham gia không tồn tại", HttpStatus.NOT_FOUND);
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {
