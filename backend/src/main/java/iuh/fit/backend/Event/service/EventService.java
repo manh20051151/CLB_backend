@@ -591,11 +591,22 @@ public class EventService {
         groupChat = groupChatRepository.save(groupChat);
 
         // 7. Gửi thông báo real-time
-
+        sendMemberRemovedNotification(groupChatId, memberIdToRemove);
 
         return convertToGroupChatResponse(groupChat);
     }
-
+    private void sendMemberRemovedNotification(String groupChatId, String removedUserId) {
+        try {
+            socketIOServer.getRoomOperations(groupChatId)
+                    .sendEvent("member_removed", Map.of(
+                            "groupId", groupChatId,
+                            "removedUserId", removedUserId,
+                            "timestamp", new Date()
+                    ));
+        } catch (Exception e) {
+//            log.error("Failed to send member removed notification", e);
+        }
+    }
     @Transactional
     public GroupChatResponse leaveGroupChat(String groupChatId, String memberId) {
         // 1. Lấy thông tin group chat
@@ -621,8 +632,23 @@ public class EventService {
         groupChat = groupChatRepository.save(groupChat);
 
         // 6. Gửi thông báo real-time
+        sendMemberLeftNotification(groupChatId, memberId);
 
+        
         return convertToGroupChatResponse(groupChat);
+    }
+
+    private void sendMemberLeftNotification(String groupChatId, String leftUserId) {
+        try {
+            socketIOServer.getRoomOperations(groupChatId)
+                    .sendEvent("member_left", Map.of(
+                            "groupId", groupChatId,
+                            "leftUserId", leftUserId,
+                            "timestamp", new Date()
+                    ));
+        } catch (Exception e) {
+//            log.error("Failed to send member left notification", e);
+        }
     }
 
     public GroupChatResponse deactivateGroup(String groupId, String leaderId) {
