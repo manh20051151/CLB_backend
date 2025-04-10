@@ -95,6 +95,31 @@
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.2.3</version>
 		</dependency>
+
+<!--		<dependency>-->
+<!--			<groupId>com.corundumstudio.socketio</groupId>-->
+<!--			<artifactId>netty-socketio</artifactId>-->
+<!--			<version>1.7.19</version>-->
+<!--		</dependency>-->
+
+		<dependency>
+			<groupId>com.corundumstudio.socketio</groupId>
+			<artifactId>netty-socketio</artifactId>
+			<version>2.0.3</version> <!-- Phiên bản hỗ trợ Spring Boot 3 -->
+		</dependency>
+
+		<!-- Thêm Netty mới nhất -->
+		<dependency>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-all</artifactId>
+			<version>4.1.100.Final</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.cloudinary</groupId>
+			<artifactId>cloudinary-http44</artifactId>
+			<version>1.33.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>

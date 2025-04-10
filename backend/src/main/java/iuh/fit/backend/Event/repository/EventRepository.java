@@ -14,4 +14,5 @@ import java.util.Set;
 @Repository
 public interface EventRepository extends JpaRepository<Event, String> {
     List<Event> findByStatus(EventStatus status);
+    List<Event> findByCreatedBy_Id(String userId);
 }

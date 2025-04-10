@@ -68,6 +68,9 @@ public class Event {
     )
     private Set<Permission> permissions;
 
+    @OneToOne(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    private GroupChat groupChat;
+
     public void reject(String reason) {
         this.status = EventStatus.REJECTED;
         this.rejectionReason = reason;

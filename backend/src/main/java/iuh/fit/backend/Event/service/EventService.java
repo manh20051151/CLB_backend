@@ -1,14 +1,17 @@
 package iuh.fit.backend.Event.service;
 
+import com.corundumstudio.socketio.SocketIOServer;
 import iuh.fit.backend.Event.Entity.*;
 import iuh.fit.backend.Event.dto.request.EventCreateRequest;
 import iuh.fit.backend.Event.dto.request.EventUpdateRequest;
 import iuh.fit.backend.Event.dto.request.OrganizerRequest;
 import iuh.fit.backend.Event.dto.response.AttendeeResponse;
 import iuh.fit.backend.Event.dto.response.EventResponse;
+import iuh.fit.backend.Event.dto.response.GroupChatResponse;
 import iuh.fit.backend.Event.enums.EventStatus;
 import iuh.fit.backend.Event.mapper.EventMapper;
 import iuh.fit.backend.Event.repository.EventRepository;
+import iuh.fit.backend.Event.repository.GroupChatRepository;
 import iuh.fit.backend.Event.repository.OrganizerRoleRepository;
 import iuh.fit.backend.Event.repository.PositionRepository;
 import iuh.fit.backend.identity.entity.Permission;
@@ -37,6 +40,71 @@ public class EventService {
     private final PositionRepository positionRepository;
     private final OrganizerRoleRepository organizerRoleRepository;
     private final EventMapper eventMapper;
+    private final GroupChatRepository groupChatRepository;
+
+    private final SocketIOServer socketIOServer;
+//    @Transactional
+//    public EventResponse createEvent(EventCreateRequest request) {
+//        validateEventRequest(request);
+//
+//        // 1. Tạo event cơ bản (chưa có organizers)
+//        Event event = eventMapper.toEvent(request, userRepository, permissionRepository,
+//                organizerRoleRepository, positionRepository);
+//        event.setStatus(EventStatus.PENDING);
+//
+//        // 2. Lưu event trước để có ID
+//        event = eventRepository.save(event);
+//
+//        // 3. Tạo organizers và thiết lập quan hệ với event
+//        Set<EventOrganizer> organizers = new HashSet<>();
+//        for (OrganizerRequest organizerRequest : request.getOrganizers()) {
+//            User user = userRepository.findById(organizerRequest.getUserId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+//            OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+//            Position position = positionRepository.findById(organizerRequest.getPositionId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
+//
+//            EventOrganizer organizer = EventOrganizer.builder()
+//                    .event(event) // Thiết lập quan hệ với event
+//                    .user(user)
+//                    .organizerRole(role)
+//                    .position(position)
+//                    .build();
+//
+//            organizers.add(organizer);
+//        }
+//
+//        // 4. Tạo participants và thiết lập quan hệ với event
+//        Set<EventParticipant> participants = new HashSet<>();
+//        for (OrganizerRequest organizerRequest : request.getParticipants()) {
+//            User user = userRepository.findById(organizerRequest.getUserId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+//            OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+//            Position position = positionRepository.findById(organizerRequest.getPositionId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
+//            EventParticipant participant = EventParticipant.builder()
+//                    .event(event) // Thiết lập quan hệ với event
+//                    .user(user)
+//                    .organizerRole(role)
+//                    .position(position)
+//                    .build();
+//
+//            participants.add(participant);
+//        }
+//
+//        // 5. Thiết lập quan hệ hai chiều
+//        event.setOrganizers(organizers);
+//        event.setParticipants(participants);
+//
+//        // 6. Lưu lại event (cascade sẽ tự động lưu organizers)
+//        event = eventRepository.save(event);
+//
+//        return eventMapper.toEventResponse(event);
+//    }
+
+
     @Transactional
     public EventResponse createEvent(EventCreateRequest request) {
         validateEventRequest(request);
@@ -51,16 +119,20 @@ public class EventService {
 
         // 3. Tạo organizers và thiết lập quan hệ với event
         Set<EventOrganizer> organizers = new HashSet<>();
+        Set<User> allMembers = new HashSet<>(); // Để dùng cho group chat
+
         for (OrganizerRequest organizerRequest : request.getOrganizers()) {
             User user = userRepository.findById(organizerRequest.getUserId())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+            allMembers.add(user); // Thêm vào danh sách thành viên chat
+
             OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
                     .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
             Position position = positionRepository.findById(organizerRequest.getPositionId())
                     .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
 
             EventOrganizer organizer = EventOrganizer.builder()
-                    .event(event) // Thiết lập quan hệ với event
+                    .event(event)
                     .user(user)
                     .organizerRole(role)
                     .position(position)
@@ -74,12 +146,14 @@ public class EventService {
         for (OrganizerRequest organizerRequest : request.getParticipants()) {
             User user = userRepository.findById(organizerRequest.getUserId())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+            allMembers.add(user); // Thêm vào danh sách thành viên chat
+
             OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
                     .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
             Position position = positionRepository.findById(organizerRequest.getPositionId())
                     .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
             EventParticipant participant = EventParticipant.builder()
-                    .event(event) // Thiết lập quan hệ với event
+                    .event(event)
                     .user(user)
                     .organizerRole(role)
                     .position(position)
@@ -92,7 +166,20 @@ public class EventService {
         event.setOrganizers(organizers);
         event.setParticipants(participants);
 
-        // 6. Lưu lại event (cascade sẽ tự động lưu organizers)
+        // 6. Tạo group chat cho event
+        User creator = userRepository.findById(request.getCreatedBy())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        GroupChat groupChat = new GroupChat();
+        groupChat.setName(event.getName());
+        groupChat.setEvent(event);
+        groupChat.setGroupLeader(creator);
+        groupChat.setMembers(allMembers);
+        groupChat.setStatus(EventStatus.PENDING); // Đặt trạng thái ban đầu
+
+        event.setGroupChat(groupChat);
+
+        // 7. Lưu lại event (cascade sẽ tự động lưu organizers và group chat)
         event = eventRepository.save(event);
 
         return eventMapper.toEventResponse(event);
@@ -197,6 +284,19 @@ public class EventService {
         attendee.setAttending(true); // Mặc định tham gia
 
         event.getAttendees().add(attendee);
+
+
+        // 4. Thêm user vào group chat của event (nếu có)
+        if (event.getGroupChat() != null) {
+            GroupChat groupChat = event.getGroupChat();
+
+            // Kiểm tra xem user đã ở trong group chưa
+            if (!groupChat.getMembers().contains(user)) {
+                groupChat.getMembers().add(user);
+                groupChatRepository.save(groupChat);
+            }
+        }
+
         event = eventRepository.save(event);
 
         return eventMapper.toEventResponse(event);
@@ -239,6 +339,12 @@ public class EventService {
                 .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
 
         event.reject(reason); // Cập nhật trạng thái & lý do từ chối
+
+        // Cập nhật trạng thái group chat tương ứng
+        if (event.getGroupChat() != null) {
+            event.getGroupChat().reject();
+        }
+
         event = eventRepository.save(event);
 
         return eventMapper.toEventResponse(event);
@@ -251,6 +357,12 @@ public class EventService {
                 .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
 
         event.approve(); // Cập nhật trạng thái là APPROVED
+
+        // Cập nhật trạng thái group chat tương ứng
+        if (event.getGroupChat() != null) {
+            event.getGroupChat().approve();
+        }
+
         event = eventRepository.save(event);
 
         return eventMapper.toEventResponse(event);
@@ -392,6 +504,156 @@ public class EventService {
         eventRepository.delete(event);
     }
 
+    @Transactional(readOnly = true)
+    public List<EventResponse> getEventsByCreator(String userId) {
+        List<Event> events = eventRepository.findByCreatedBy_Id(userId);
+        events.forEach(event -> Hibernate.initialize(event.getPermissions()));
+
+        return events.stream()
+                .map(eventMapper::toEventResponse)
+                .collect(Collectors.toList());
+    }
+
+    ////
+
+    // Lấy danh sách group chat đã approved theo user
+    public List<GroupChatResponse> getApprovedGroupChatsByUser(String userId) {
+        // Validate user exists
+        if (!userRepository.existsById(userId)) {
+            throw new AppException(ErrorCode.USER_NOT_EXISTED);
+        }
+
+        return groupChatRepository.findByMembersIdAndStatus(userId, EventStatus.APPROVED)
+                .stream()
+                .map(this::convertToGroupChatResponse)
+                .collect(Collectors.toList());
+    }
+
+    // Convert entity to DTO
+    private GroupChatResponse convertToGroupChatResponse(GroupChat groupChat) {
+        return GroupChatResponse.builder()
+                .id(groupChat.getId())
+                .name(groupChat.getName())
+                .build();
+    }
+
+    public GroupChatResponse getGroupChatById(String groupChatId) {
+        GroupChat groupChat = groupChatRepository.findById(groupChatId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_CHAT_NOT_FOUND));
+
+        return convertToDetailedGroupChatResponse(groupChat);
+    }
+
+    private GroupChatResponse convertToDetailedGroupChatResponse(GroupChat groupChat) {
+        return GroupChatResponse.builder()
+                .id(groupChat.getId())
+                .name(groupChat.getName())
+                .eventId(groupChat.getEvent() != null ? groupChat.getEvent().getId() : null)
+                .groupLeaderId(groupChat.getGroupLeader() != null ? groupChat.getGroupLeader().getId() : null)
+                .memberIds(groupChat.getMembers().stream()
+                        .map(User::getId)
+                        .collect(Collectors.toSet()))
+                .status(groupChat.getStatus())
+                .build();
+    }
+
+    @Transactional
+    public GroupChatResponse removeMemberFromGroupChat(
+            String groupChatId,
+            String leaderId,
+            String memberIdToRemove) {
+
+        // 1. Lấy thông tin group chat
+        GroupChat groupChat = groupChatRepository.findById(groupChatId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_CHAT_NOT_FOUND));
+
+        // 2. Kiểm tra quyền leader
+        if (!groupChat.getGroupLeader().getId().equals(leaderId)) {
+            throw new AppException(ErrorCode.PERMISSION_DENIED);
+        }
+
+        // 3. Tìm user cần xóa
+        User userToRemove = userRepository.findById(memberIdToRemove)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // 4. Kiểm tra user có trong group không
+        if (!groupChat.getMembers().contains(userToRemove)) {
+            throw new AppException(ErrorCode.USER_NOT_IN_GROUP);
+        }
+
+        // 5. Không cho xóa chính leader
+        if (memberIdToRemove.equals(leaderId)) {
+            throw new AppException(ErrorCode.INVALID_OPERATION);
+        }
+
+        // 6. Thực hiện xóa
+        groupChat.getMembers().remove(userToRemove);
+        groupChat = groupChatRepository.save(groupChat);
+
+        // 7. Gửi thông báo real-time
+
+
+        return convertToGroupChatResponse(groupChat);
+    }
+
+    @Transactional
+    public GroupChatResponse leaveGroupChat(String groupChatId, String memberId) {
+        // 1. Lấy thông tin group chat
+        GroupChat groupChat = groupChatRepository.findById(groupChatId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_CHAT_NOT_FOUND));
+
+        // 2. Tìm user muốn rời nhóm
+        User leavingUser = userRepository.findById(memberId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // 3. Kiểm tra user có trong nhóm không
+        if (!groupChat.getMembers().contains(leavingUser)) {
+            throw new AppException(ErrorCode.USER_NOT_IN_GROUP);
+        }
+
+        // 4. Kiểm tra nếu là leader thì không được tự rời
+        if (groupChat.getGroupLeader().getId().equals(memberId)) {
+            throw new AppException(ErrorCode.LEADER_CANNOT_LEAVE);
+        }
+
+        // 5. Thực hiện rời nhóm
+        groupChat.getMembers().remove(leavingUser);
+        groupChat = groupChatRepository.save(groupChat);
+
+        // 6. Gửi thông báo real-time
+
+        return convertToGroupChatResponse(groupChat);
+    }
+
+    public GroupChatResponse deactivateGroup(String groupId, String leaderId) {
+
+        GroupChat groupChat = groupChatRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_CHAT_NOT_FOUND));
+
+        // 2. Kiểm tra quyền leader
+        if (!groupChat.getGroupLeader().getId().equals(leaderId)) {
+            throw new AppException(ErrorCode.PERMISSION_DENIED);
+        }
+
+        if (groupChat.getStatus() == EventStatus.PENDING) {
+            throw new AppException(ErrorCode.INVALID_OPERATION);
+        }
+
+        groupChat.setStatus(EventStatus.PENDING);
+        GroupChat updatedGroup = groupChatRepository.save(groupChat);
+
+        sendSocketNotification(groupId, "group_deactivated",
+                Map.of("newStatus", "PENDING"));
+
+        return convertToGroupChatResponse(updatedGroup);
+    }
+    private void sendSocketNotification(String groupId, String event, Object data) {
+        try {
+            socketIOServer.getRoomOperations(groupId).sendEvent(event, data);
+        } catch (Exception e) {
+//            log.error("Failed to send socket notification", e);
+        }
+    }
 
 
 }

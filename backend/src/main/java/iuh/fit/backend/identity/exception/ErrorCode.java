@@ -30,7 +30,13 @@ public enum ErrorCode {
     // Mã lỗi cho Position
     POSITION_ALREADY_EXISTS(3003, "chức vụ đã tồn tại", HttpStatus.BAD_REQUEST),
     POSITION_NOT_FOUND(3004, "chức vụ không tồn tại", HttpStatus.NOT_FOUND),
-    ATTENDEE_NOT_FOUND(3005, "người tham gia không tồn tại", HttpStatus.NOT_FOUND);
+    ATTENDEE_NOT_FOUND(3005, "người tham gia không tồn tại", HttpStatus.NOT_FOUND),
+    GROUP_CHAT_NOT_FOUND(3006, "GROUP không tồn tại", HttpStatus.NOT_FOUND),
+    MESSAGE_NOT_FOUND(3007, "MESSAGE không tồn tại", HttpStatus.NOT_FOUND),
+    PERMISSION_DENIED(3008, "userId không hợp lệ", HttpStatus.NOT_FOUND),
+    USER_NOT_IN_GROUP(3009, "user không có trong group ", HttpStatus.NOT_FOUND),
+    INVALID_OPERATION(3010, "Không cho xóa chính leader", HttpStatus.NOT_FOUND),
+    LEADER_CANNOT_LEAVE(3011, "leader không được rời nhóm", HttpStatus.NOT_FOUND),
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {
