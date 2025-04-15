@@ -147,7 +147,7 @@ public interface EventMapper {
             User user = a.getUser();
             return new AttendeeResponse(
                     user.getId(),
-                    user.getStudentCode(),
+                    user.getUsername(),
                     user.getFirstName(),
                     user.getLastName(),
                     a.isAttending()

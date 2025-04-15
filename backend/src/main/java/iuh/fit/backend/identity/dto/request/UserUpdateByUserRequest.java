@@ -1,27 +1,23 @@
-package iuh.fit.backend.identity.dto.response;
+package iuh.fit.backend.identity.dto.request;
 
-import iuh.fit.backend.identity.entity.Role;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
-import java.util.Set;
+import java.util.List;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserResponse {
-    String id;
-    String username;
+public class UserUpdateByUserRequest {
+    String passwordOld;
+    String password;
 //    String studentCode;
     String firstName;
     String lastName;
     LocalDate dob;
-    Set<RoleResponse> roles;
-
-    String avatar; // URL từ Cloudinary
     String email;
     Boolean gender; // True là nam
 }

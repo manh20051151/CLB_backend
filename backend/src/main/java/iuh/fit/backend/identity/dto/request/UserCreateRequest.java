@@ -18,10 +18,13 @@ public class UserCreateRequest {
     String username;
     @Size(min = 8, message = "PASSWORD_INVALID")
     String password;
-    String studentCode;
+//    String studentCode;
     String firstName;
     String lastName;
 
+    //    String avatar; // URL từ Cloudinary
+    String email;
+    Boolean gender; // True là nam
     @DobConstraint(min = 10, message = "INVALID_DOB")
     LocalDate dob;
 }

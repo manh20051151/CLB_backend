@@ -1,10 +1,12 @@
 package iuh.fit.backend.identity.service;
 
 import iuh.fit.backend.identity.dto.request.UserCreateRequest;
+import iuh.fit.backend.identity.dto.request.UserUpdateByUserRequest;
 import iuh.fit.backend.identity.dto.request.UserUpdateRequest;
 import iuh.fit.backend.identity.dto.response.UserResponse;
+import iuh.fit.backend.identity.entity.Role;
 import iuh.fit.backend.identity.entity.User;
-import iuh.fit.backend.identity.enums.Role;
+//import iuh.fit.backend.identity.enums.Role;
 import iuh.fit.backend.identity.exception.AppException;
 import iuh.fit.backend.identity.exception.ErrorCode;
 import iuh.fit.backend.identity.mapper.UserMapper;
@@ -22,9 +24,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -36,6 +38,10 @@ public class UserService {
     RoleRepository roleRepository;
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
+
+    // Thêm constant cho avatar mặc định
+    private static final String DEFAULT_AVATAR_URL =
+            "https://res.cloudinary.com/dnvtmbmne/image/upload/v1744707484/et5vc9r9fejjgrjsvxyn.jpg";
     public User createUser(UserCreateRequest request){
 
         if(userRepository.existsByUsername(request.getUsername())){
@@ -45,10 +51,22 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        HashSet<String> roles = new HashSet<>();
-        roles.add(Role.USER.name());
+        // Set avatar mặc định
+        user.setAvatar(DEFAULT_AVATAR_URL);
 
+//        HashSet<String> roles = new HashSet<>();
+//        roles.add(Role.USER.name());
 //        user.setRoles(roles);
+
+        Role roleUser = roleRepository.findByName("USER")
+                .orElseThrow(() -> new RuntimeException("Role USER not found"));
+
+        Set<Role> roles = new HashSet<>();
+        roles.add(roleUser);
+
+        user.setRoles(roles);
+
+
 
         return userRepository.save(user);
     }
@@ -64,16 +82,119 @@ public class UserService {
         return userMapper.toUserResponse(userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found")));
     }
 
-    public UserResponse updateUser(String userId, UserUpdateRequest request){
-    User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+//    public UserResponse updateUser(String userId, UserUpdateRequest request){
+//        User user = userRepository.findById(userId).orElseThrow(() ->  new AppException(ErrorCode.USER_NOT_EXISTED));
+//
+//        userMapper.updateUser(user, request);
+//
+//    //    user.setPassword((passwordEncoder.encode(request.getPassword())));
+//    //    var roles = roleRepository.findAllById(request.getRoles());
+//    //    user.setRoles(new HashSet<>(roles));
+//
+//        // Chỉ cập nhật các trường được cung cấp
+//        if (request.getPassword() != null) {
+//            user.setPassword(passwordEncoder.encode(request.getPassword()));
+//        }
+//        if (request.getStudentCode() != null) {
+//            user.setStudentCode(request.getStudentCode());
+//        }
+//        if (request.getFirstName() != null) {
+//            user.setFirstName(request.getFirstName());
+//        }
+//        if (request.getLastName() != null) {
+//            user.setLastName(request.getLastName());
+//        }
+//        if (request.getDob() != null) {
+//            user.setDob(request.getDob());
+//        }
+//        if (request.getRoles() != null) {
+//            var roles = roleRepository.findAllById(request.getRoles());
+//            user.setRoles(new HashSet<>(roles));
+//        }
+//        if (request.getAvatar() != null) {
+//            user.setAvatar(request.getAvatar());
+//        }
+//        if (request.getEmail() != null) {
+//            user.setEmail(request.getEmail());
+//        }
+//        if (request.getGender() != null) {
+//            user.setGender(request.getGender());
+//        }
+//
+//        return userMapper.toUserResponse(userRepository.save(user));
+//    }
 
-    userMapper.updateUser(user, request);
+    public UserResponse updateUser(String userId, UserUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-    user.setPassword((passwordEncoder.encode(request.getPassword())));
-    var roles = roleRepository.findAllById(request.getRoles());
-    user.setRoles(new HashSet<>(roles));
+        // Sử dụng các phương thức setter có điều kiện
+        setIfNotNull(request.getPassword(), pwd ->
+                user.setPassword(passwordEncoder.encode(pwd)));
+        setIfNotNull(request.getFirstName(), user::setFirstName);
+        setIfNotNull(request.getLastName(), user::setLastName);
+        setIfNotNull(request.getDob(), user::setDob);
+        setIfNotNull(request.getAvatar(), user::setAvatar);
+        setIfNotNull(request.getEmail(), user::setEmail);
+        setIfNotNull(request.getGender(), user::setGender);
 
-    return userMapper.toUserResponse(userRepository.save(user));
+        // Xử lý roles
+        if (request.getRoles() != null) {
+            Set<Role> roles = request.getRoles().stream()
+                    .filter(Objects::nonNull)
+                    .map(roleRepository::findById)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
+            user.setRoles(roles);
+        }
+
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    // Helper method
+    private <T> void setIfNotNull(T value, Consumer<T> setter) {
+        if (value != null) {
+            setter.accept(value);
+        }
+    }
+
+    public UserResponse updateUserByUser(String userId, UserUpdateByUserRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // Kiểm tra nếu có yêu cầu đổi mật khẩu
+        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            if (request.getPasswordOld() == null || request.getPasswordOld().isEmpty()) {
+                throw new AppException(ErrorCode.PASSWORD_OLD_REQUIRED);
+            }
+
+            if (!passwordEncoder.matches(request.getPasswordOld(), user.getPassword())) {
+                throw new AppException(ErrorCode.PASSWORD_OLD_NOT_MATCH);
+            }
+
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+
+        Optional.ofNullable(request.getFirstName()).ifPresent(user::setFirstName);
+        Optional.ofNullable(request.getLastName()).ifPresent(user::setLastName);
+        Optional.ofNullable(request.getDob()).ifPresent(user::setDob);
+        Optional.ofNullable(request.getEmail()).ifPresent(user::setEmail);
+        Optional.ofNullable(request.getGender()).ifPresent(user::setGender);
+
+        // Gọi mapper để xử lý các trường đặc biệt (nếu cần)
+//        userMapper.updateUserByUser(user, request);
+
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    public UserResponse updateUserAvatar(String userId, String avatarUrl) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        user.setAvatar(avatarUrl);
+        return userMapper.toUserResponse(userRepository.save(user));
     }
 
     public void deleteUser(String userId){

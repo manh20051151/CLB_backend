@@ -263,7 +263,7 @@ public class EventService {
         return attendeeStream
                 .map(a -> new AttendeeResponse(
                         a.getUser().getId(),
-                        a.getUser().getStudentCode(),
+                        a.getUser().getUsername(),
                         a.getUser().getFirstName(),
                         a.getUser().getLastName(),
                         a.isAttending()
@@ -634,7 +634,7 @@ public class EventService {
         // 6. Gửi thông báo real-time
         sendMemberLeftNotification(groupChatId, memberId);
 
-        
+
         return convertToGroupChatResponse(groupChat);
     }
 

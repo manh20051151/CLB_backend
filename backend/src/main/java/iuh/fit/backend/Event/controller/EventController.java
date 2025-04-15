@@ -470,10 +470,10 @@ public class EventController {
 
         // Xử lý khác nhau cho text và file
         if (message.getType() == ChatMessage.MessageType.TEXT) {
-            message.setContent("tin nhắn đã bị xóa");
+            message.setContent("Tin nhắn đã bị xóa");
         } else {
 //            message.setContent(null);
-            message.setContent("tin nhắn đã bị xóa"); // Tuỳ chỉnh thông báo
+            message.setContent("Tin nhắn đã bị xóa"); // Tuỳ chỉnh thông báo
             // Giữ nguyên các trường fileUrl, fileName,... để có thể hiển thị thông tin "Đã từng gửi file"
         }
 

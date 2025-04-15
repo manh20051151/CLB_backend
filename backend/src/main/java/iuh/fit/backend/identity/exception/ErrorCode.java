@@ -37,6 +37,8 @@ public enum ErrorCode {
     USER_NOT_IN_GROUP(3009, "user không có trong group ", HttpStatus.NOT_FOUND),
     INVALID_OPERATION(3010, "Không cho xóa chính leader", HttpStatus.NOT_FOUND),
     LEADER_CANNOT_LEAVE(3011, "leader không được rời nhóm", HttpStatus.NOT_FOUND),
+    PASSWORD_OLD_REQUIRED(3012, "Password cũ bắt buộc khi đổi mật khẩu", HttpStatus.NOT_FOUND),
+    PASSWORD_OLD_NOT_MATCH(3013, "Password cũ không đúng", HttpStatus.NOT_FOUND),
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

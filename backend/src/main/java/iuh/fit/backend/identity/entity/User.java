@@ -21,11 +21,17 @@ public class User {
     String id;
     String username;
     String password;
-    String studentCode;
+//    String studentCode;
     String firstName;
     String lastName;
     LocalDate dob;
-//    @ElementCollection
+
+    String avatar; // URL từ Cloudinary
+    String email;
+    Boolean gender; // True là nam
+
+
+    //    @ElementCollection
     @ManyToMany
     Set<Role> roles;
 

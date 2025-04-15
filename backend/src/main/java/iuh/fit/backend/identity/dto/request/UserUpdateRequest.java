@@ -13,10 +13,13 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserUpdateRequest {
     String password;
-    String studentCode;
+//    String studentCode;
     String firstName;
     String lastName;
     LocalDate dob;
     List<String> roles;
 
+    String avatar; // URL từ Cloudinary
+    String email;
+    Boolean gender; // True là nam
 }

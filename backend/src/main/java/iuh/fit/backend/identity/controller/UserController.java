@@ -1,7 +1,9 @@
 package iuh.fit.backend.identity.controller;
 
+import iuh.fit.backend.Event.service.CloudinaryService;
 import iuh.fit.backend.identity.dto.request.ApiResponse;
 import iuh.fit.backend.identity.dto.request.UserCreateRequest;
+import iuh.fit.backend.identity.dto.request.UserUpdateByUserRequest;
 import iuh.fit.backend.identity.dto.request.UserUpdateRequest;
 import iuh.fit.backend.identity.dto.response.UserResponse;
 import iuh.fit.backend.identity.entity.User;
@@ -12,7 +14,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -21,7 +25,7 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserController {
     UserService userService;
-
+    CloudinaryService cloudinaryService;
     @PostMapping
     ApiResponse<User> createUser(@RequestBody @Valid UserCreateRequest request){
         ApiResponse<User> apiResponse= new ApiResponse<>();
@@ -58,6 +62,25 @@ public class UserController {
                 .result(userService.updateUser(userId,request))
                 .build();
     }
+
+    @PutMapping("/byuser/{userId}")
+    ApiResponse<UserResponse> updateUserByUser(@PathVariable String userId, @RequestBody UserUpdateByUserRequest request){
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.updateUserByUser(userId,request))
+                .build();
+    }
+
+    @PatchMapping("/{userId}/avatar")
+    public ApiResponse<UserResponse> updateAvatar(
+            @PathVariable String userId,
+            @RequestPart("file") MultipartFile file) throws IOException {
+
+        String avatarUrl = cloudinaryService.uploadFile(file);
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.updateUserAvatar(userId, avatarUrl))
+                .build();
+    }
+
     @DeleteMapping("/{userId}")
     ApiResponse<String> deleteUser(@PathVariable String userId){
         userService.deleteUser(userId);
