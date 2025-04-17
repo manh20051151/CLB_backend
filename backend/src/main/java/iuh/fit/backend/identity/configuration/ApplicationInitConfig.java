@@ -40,6 +40,18 @@ public class ApplicationInitConfig {
 
                         return roleRepository.save(newAdminRole);
                     });
+            Role adminGuest = roleRepository.findByName("GUEST")
+                    .orElseGet(() -> {
+                        Role newAdminRole = Role.builder()
+                                .name("GUEST")
+                                .description("Thành viên vãng lai")
+                                .build();
+
+                        // Có thể thêm permissions mặc định ở đây nếu cần
+                        // newAdminRole.setPermissions(defaultAdminPermissions());
+
+                        return roleRepository.save(newAdminRole);
+                    });
             if (userRepository.findByUsername("admin").isEmpty()){
 //                var roles = new HashSet<String>();
 //                roles.add(Role.ADMIN.name());

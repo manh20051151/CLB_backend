@@ -58,7 +58,7 @@ public class UserService {
 //        roles.add(Role.USER.name());
 //        user.setRoles(roles);
 
-        Role roleUser = roleRepository.findByName("USER")
+        Role roleUser = roleRepository.findByName("GUEST")
                 .orElseThrow(() -> new RuntimeException("Role USER not found"));
 
         Set<Role> roles = new HashSet<>();
