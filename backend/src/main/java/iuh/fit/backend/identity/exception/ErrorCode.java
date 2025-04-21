@@ -39,6 +39,9 @@ public enum ErrorCode {
     LEADER_CANNOT_LEAVE(3011, "leader không được rời nhóm", HttpStatus.NOT_FOUND),
     PASSWORD_OLD_REQUIRED(3012, "Password cũ bắt buộc khi đổi mật khẩu", HttpStatus.NOT_FOUND),
     PASSWORD_OLD_NOT_MATCH(3013, "Password cũ không đúng", HttpStatus.NOT_FOUND),
+
+    FILE_NOT_FOUND(3014, "Không tìm thấy file hoặc tin nhắn không chứa file", HttpStatus.NOT_FOUND),
+    FILE_DOWNLOAD_ERROR(3015, "Lỗi khi tải file", HttpStatus.NOT_FOUND),
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

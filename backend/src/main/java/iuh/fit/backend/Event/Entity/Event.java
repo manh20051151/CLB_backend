@@ -46,7 +46,7 @@ public class Event {
 
     @Column(name = "created_at", nullable = true, updatable = false)
     @Temporal(TemporalType.TIMESTAMP)
-    private Date createdAt; // Thêm trường mới
+    private Date createdAt;
     @ManyToOne
     @JoinColumn(name = "created_by", nullable = false)
     User createdBy; // Người tạo sự kiện
@@ -71,6 +71,12 @@ public class Event {
     @OneToOne(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private GroupChat groupChat;
 
+
+    // Thêm quan hệ với News
+    @OneToMany(mappedBy = "event", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = false)
+    Set<News> news = new HashSet<>();
+
+
     public void reject(String reason) {
         this.status = EventStatus.REJECTED;
         this.rejectionReason = reason;
@@ -78,6 +84,17 @@ public class Event {
     public void approve() {
         this.status = EventStatus.APPROVED;
         this.rejectionReason = null; // Xóa lý do từ chối nếu có
+    }
+
+    // Thêm phương thức helper để quản lý quan hệ với News
+    public void addNews(News newsItem) {
+        this.news.add(newsItem);
+        newsItem.setEvent(this);
+    }
+
+    public void removeNews(News newsItem) {
+        this.news.remove(newsItem);
+        newsItem.setEvent(null);
     }
 
     @PrePersist

@@ -24,6 +24,11 @@ public class ChatMessageDto {
     private String fileType;
     private Long fileSize;
     private boolean deleted;
+    private String downloadUrl;
 
+    public static ChatMessageDtoBuilder builder() {
+        return new ChatMessageDtoBuilder()
+                .downloadUrl("/api/events/messages/" + builder().id + "/download");
+    }
     // Getters and setters
 }

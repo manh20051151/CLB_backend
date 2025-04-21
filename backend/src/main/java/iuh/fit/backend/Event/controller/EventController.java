@@ -25,6 +25,7 @@ import iuh.fit.backend.identity.exception.AppException;
 import iuh.fit.backend.identity.exception.ErrorCode;
 import iuh.fit.backend.identity.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -33,6 +34,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -417,6 +419,42 @@ public class EventController {
                 .fileSize(message.getFileSize())
                 .deleted(message.isDeleted())
                 .build();
+    }
+
+
+    @GetMapping("/messages/{messageId}/download")
+    public ResponseEntity<Resource> downloadFile(@PathVariable String messageId) throws IOException {
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new AppException(ErrorCode.MESSAGE_NOT_FOUND));
+
+        // Chỉ cho phép tải nếu không phải là TEXT và có fileUrl
+        if (message.getType() == ChatMessage.MessageType.TEXT || message.getFileUrl() == null) {
+            throw new AppException(ErrorCode.FILE_NOT_FOUND);
+        }
+
+        // Tạo URL tải file từ Cloudinary
+        String downloadUrl = message.getFileUrl();
+
+        // Tạo request để tải file từ Cloudinary
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<byte[]> response = restTemplate.getForEntity(downloadUrl, byte[].class);
+
+        if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+            throw new AppException(ErrorCode.FILE_DOWNLOAD_ERROR);
+        }
+
+        // Tạo Resource từ dữ liệu tải về
+        ByteArrayResource resource = new ByteArrayResource(response.getBody());
+
+        // Thiết lập headers cho response
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(message.getFileType()));
+        headers.setContentDispositionFormData("attachment", message.getFileName());
+        headers.setContentLength(message.getFileSize());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(resource);
     }
 
     // Cập nhật Socket.IO handler
