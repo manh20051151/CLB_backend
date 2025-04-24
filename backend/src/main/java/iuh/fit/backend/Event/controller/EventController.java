@@ -211,6 +211,15 @@ public class EventController {
                 .build();
     }
 
+    @GetMapping("/attendee/{userId}")
+    public ApiResponse<List<EventResponse>> getEventsByAttendee(@PathVariable String userId) {
+        return ApiResponse.<List<EventResponse>>builder()
+                .code(1000)
+                .message("Lấy danh sách sự kiện theo người tham dự thành công")
+                .result(eventService.getEventsByAttendee(userId))
+                .build();
+    }
+
     @PostConstruct
     public void setupSocketIOListeners() {
         // Lắng nghe sự kiện chat

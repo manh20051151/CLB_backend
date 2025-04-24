@@ -514,6 +514,19 @@ public class EventService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<EventResponse> getEventsByAttendee(String userId) {
+        List<Event> events = eventRepository.findByAttendeeId(userId);
+        initializePermissions(events);
+        return events.stream()
+                .map(eventMapper::toEventResponse)
+                .collect(Collectors.toList());
+    }
+
+    private void initializePermissions(List<Event> events) {
+        events.forEach(event -> Hibernate.initialize(event.getPermissions()));
+    }
+
     ////
 
     // Lấy danh sách group chat đã approved theo user
