@@ -39,6 +39,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -304,6 +305,84 @@ public class EventController {
         return ApiResponse.<List<ChatMessageDto>>builder()
                 .code(1000)
                 .message("Lấy danh sách tin nhắn thành công")
+                .result(dtos)
+                .build();
+    }
+
+    // API lấy danh sách tin nhắn media (ảnh và video)
+    @GetMapping("/{groupId}/messages/media")
+    public ApiResponse<List<ChatMessageDto>> getMediaMessages(
+            @PathVariable String groupId) {
+
+        GroupChat groupChat = groupChatRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_CHAT_NOT_FOUND));
+
+        // Danh sách loại tin nhắn media (ảnh và video)
+        List<ChatMessage.MessageType> mediaTypes = Arrays.asList(
+                ChatMessage.MessageType.IMAGE,
+                ChatMessage.MessageType.VIDEO
+        );
+
+        List<ChatMessage> messages = chatMessageRepository
+                .findByGroupChatAndTypeInOrderBySentAtAsc(groupChat, mediaTypes);
+
+        List<ChatMessageDto> dtos = messages.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+
+        return ApiResponse.<List<ChatMessageDto>>builder()
+                .code(1000)
+                .message("Lấy danh sách tin nhắn media thành công")
+                .result(dtos)
+                .build();
+    }
+
+    // API lấy danh sách tin nhắn file
+    @GetMapping("/{groupId}/messages/files")
+    public ApiResponse<List<ChatMessageDto>> getFileMessages(
+            @PathVariable String groupId) {
+
+        GroupChat groupChat = groupChatRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_CHAT_NOT_FOUND));
+
+        List<ChatMessage> messages = chatMessageRepository
+                .findByGroupChatAndTypeOrderBySentAtAsc(
+                        groupChat,
+                        ChatMessage.MessageType.FILE
+                );
+
+        List<ChatMessageDto> dtos = messages.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+
+        return ApiResponse.<List<ChatMessageDto>>builder()
+                .code(1000)
+                .message("Lấy danh sách tin nhắn file thành công")
+                .result(dtos)
+                .build();
+    }
+
+    // API lấy danh sách tin nhắn audio
+    @GetMapping("/{groupId}/messages/audios")
+    public ApiResponse<List<ChatMessageDto>> getAudioMessages(
+            @PathVariable String groupId) {
+
+        GroupChat groupChat = groupChatRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_CHAT_NOT_FOUND));
+
+        List<ChatMessage> messages = chatMessageRepository
+                .findByGroupChatAndTypeOrderBySentAtAsc(
+                        groupChat,
+                        ChatMessage.MessageType.AUDIO
+                );
+
+        List<ChatMessageDto> dtos = messages.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+
+        return ApiResponse.<List<ChatMessageDto>>builder()
+                .code(1000)
+                .message("Lấy danh sách tin nhắn audio thành công")
                 .result(dtos)
                 .build();
     }

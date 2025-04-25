@@ -13,5 +13,15 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, String
     // Hoặc nếu muốn tìm theo groupChatId
     List<ChatMessage> findByGroupChatIdOrderBySentAtAsc(String groupChatId);
 
+    // Tìm tin nhắn theo nhóm và loại (IMAGE hoặc VIDEO)
+    List<ChatMessage> findByGroupChatAndTypeInOrderBySentAtAsc(GroupChat groupChat, List<ChatMessage.MessageType> types);
 
+    // Tìm tin nhắn theo nhóm và loại cụ thể (FILE hoặc AUDIO)
+    List<ChatMessage> findByGroupChatAndTypeOrderBySentAtAsc(GroupChat groupChat, ChatMessage.MessageType type);
+
+    // Tìm tin nhắn theo groupId và loại (IMAGE/VIDEO)
+    List<ChatMessage> findByGroupChatIdAndTypeInOrderBySentAtAsc(String groupChatId, List<ChatMessage.MessageType> types);
+
+    // Tìm tin nhắn theo groupId và loại cụ thể (FILE/AUDIO)
+    List<ChatMessage> findByGroupChatIdAndTypeOrderBySentAtAsc(String groupChatId, ChatMessage.MessageType type);
 }
