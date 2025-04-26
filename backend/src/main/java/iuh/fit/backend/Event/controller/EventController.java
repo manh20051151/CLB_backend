@@ -80,14 +80,14 @@ public class EventController {
                 .result(eventService.getAllEvents())
                 .build();
     }
-    @GetMapping("/guest")
-    public ApiResponse<List<EventResponse>> getEventsByGuest() {
-        return ApiResponse.<List<EventResponse>>builder()
-                .code(1000)
-                .message("Lấy danh sách sự kiện thành công")
-                .result(eventService.getAllEvents())
-                .build();
-    }
+//    @GetMapping("/guest")
+//    public ApiResponse<List<EventResponse>> getEventsByGuest() {
+//        return ApiResponse.<List<EventResponse>>builder()
+//                .code(1000)
+//                .message("Lấy danh sách sự kiện thành công")
+//                .result(eventService.getAllEvents())
+//                .build();
+//    }
 
     @GetMapping("/{eventId}/export")
     public ResponseEntity<Resource> exportEventToWord(@PathVariable String eventId) {
@@ -174,6 +174,15 @@ public class EventController {
 
     @GetMapping("/status")
     public ApiResponse<List<EventResponse>> getEvents(@RequestParam(required = false) EventStatus status) {
+        return ApiResponse.<List<EventResponse>>builder()
+                .code(1000)
+                .message("Lấy danh sách sự kiện thành công")
+                .result(eventService.getEventsByStatus(status))
+                .build();
+    }
+
+    @GetMapping("/status/notoken")
+    public ApiResponse<List<EventResponse>> getEventsNoToken(@RequestParam(required = false) EventStatus status) {
         return ApiResponse.<List<EventResponse>>builder()
                 .code(1000)
                 .message("Lấy danh sách sự kiện thành công")
