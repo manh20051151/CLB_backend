@@ -80,6 +80,14 @@ public class EventController {
                 .result(eventService.getAllEvents())
                 .build();
     }
+    @GetMapping("/guest")
+    public ApiResponse<List<EventResponse>> getEventsByGuest() {
+        return ApiResponse.<List<EventResponse>>builder()
+                .code(1000)
+                .message("Lấy danh sách sự kiện thành công")
+                .result(eventService.getAllEvents())
+                .build();
+    }
 
     @GetMapping("/{eventId}/export")
     public ResponseEntity<Resource> exportEventToWord(@PathVariable String eventId) {
