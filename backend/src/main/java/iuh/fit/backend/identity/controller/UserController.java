@@ -47,7 +47,12 @@ public class UserController {
                 .result(userService.getUser(userId))
                 .build();
     }
-
+    @GetMapping("/notoken/{userId}")
+    ApiResponse<UserResponse> getUserNoToken(@PathVariable String userId){
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.getUserNotoken(userId))
+                .build();
+    }
     @GetMapping("/myInfo")
     ApiResponse<UserResponse> getMyInfo(){
         return ApiResponse.<UserResponse>builder()
@@ -86,6 +91,28 @@ public class UserController {
         userService.deleteUser(userId);
         return ApiResponse.<String>builder()
                 .result("User hs been deleted")
+                .build();
+    }
+
+    @PutMapping("/{userId}/position")
+//    @PreAuthorize("hasRole('ADMIN')") // Chỉ admin có thể thay đổi position
+    public ApiResponse<UserResponse> updateUserPosition(
+            @PathVariable String userId,
+            @RequestParam(required = false) String positionId) {
+
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.updateUserPosition(userId, positionId))
+                .build();
+    }
+
+    @PutMapping("/{userId}/organizer-role")
+//    @PreAuthorize("hasRole('ADMIN')") // Chỉ admin có thể thay đổi organizer role
+    public ApiResponse<UserResponse> updateUserOrganizerRole(
+            @PathVariable String userId,
+            @RequestParam(required = false) String organizerRoleId) {
+
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.updateUserOrganizerRole(userId, organizerRoleId))
                 .build();
     }
 }

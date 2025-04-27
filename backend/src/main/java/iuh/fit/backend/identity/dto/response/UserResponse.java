@@ -1,5 +1,7 @@
 package iuh.fit.backend.identity.dto.response;
 
+import iuh.fit.backend.Event.dto.response.OrganizerRoleResponse;
+import iuh.fit.backend.Event.dto.response.PositionResponse;
 import iuh.fit.backend.identity.entity.Role;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -24,4 +26,6 @@ public class UserResponse {
     String avatar; // URL từ Cloudinary
     String email;
     Boolean gender; // True là nam
+    PositionResponse position;
+    OrganizerRoleResponse organizerRole;
 }

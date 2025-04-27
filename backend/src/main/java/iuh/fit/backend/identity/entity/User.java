@@ -1,5 +1,7 @@
 package iuh.fit.backend.identity.entity;
 
+import iuh.fit.backend.Event.Entity.OrganizerRole;
+import iuh.fit.backend.Event.Entity.Position;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -30,6 +32,15 @@ public class User {
     String email;
     Boolean gender; // True là nam
 
+
+    // Quan hệ Many-to-One với Position (optional = true mặc định)
+    @ManyToOne
+    @JoinColumn(name = "position_id")  // Tạo cột position_id trong bảng User
+    Position position;  // Có thể null nếu User không thuộc Position nào
+
+    @ManyToOne
+    @JoinColumn(name = "organizer_role_id")
+    OrganizerRole organizerRole;  // User có thể có một OrganizerRole hoặc không
 
     //    @ElementCollection
     @ManyToMany

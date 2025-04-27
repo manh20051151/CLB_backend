@@ -30,12 +30,12 @@ public class EventOrganizer {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "organizer_role_id", nullable = false)
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "organizer_role_id", nullable = true)
     private OrganizerRole organizerRole;
 
-    @ManyToOne
-    @JoinColumn(name = "position_id", nullable = false)
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "position_id", nullable = true)
     private Position position;
 
 

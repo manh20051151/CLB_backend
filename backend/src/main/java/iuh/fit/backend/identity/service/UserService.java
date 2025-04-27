@@ -1,5 +1,9 @@
 package iuh.fit.backend.identity.service;
 
+import iuh.fit.backend.Event.Entity.OrganizerRole;
+import iuh.fit.backend.Event.Entity.Position;
+import iuh.fit.backend.Event.repository.OrganizerRoleRepository;
+import iuh.fit.backend.Event.repository.PositionRepository;
 import iuh.fit.backend.identity.dto.request.UserCreateRequest;
 import iuh.fit.backend.identity.dto.request.UserUpdateByUserRequest;
 import iuh.fit.backend.identity.dto.request.UserUpdateRequest;
@@ -23,6 +27,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -33,6 +38,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserService {
+    private final OrganizerRoleRepository organizerRoleRepository;
+    private final PositionRepository positionRepository;
 
     UserRepository userRepository;
     RoleRepository roleRepository;
@@ -79,6 +86,11 @@ public class UserService {
 
     @PostAuthorize("returnObject.username == authentication.name")
     public UserResponse getUser(String id){
+        return userMapper.toUserResponse(userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found")));
+    }
+
+//    @PostAuthorize("returnObject.username == authentication.name")
+    public UserResponse getUserNotoken(String id){
         return userMapper.toUserResponse(userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found")));
     }
 
@@ -210,4 +222,37 @@ public class UserService {
          return userMapper.toUserResponse(user);
     }
 
+
+    @Transactional
+    public UserResponse updateUserPosition(String userId, String positionId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        Position position = null;
+        if (positionId != null && !positionId.isEmpty()) {
+            position = positionRepository.findById(positionId)
+                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
+        }
+
+        user.setPosition(position);
+        userRepository.save(user);
+
+        return userMapper.toUserResponse(user);
+    }
+    @Transactional
+    public UserResponse updateUserOrganizerRole(String userId, String organizerRoleId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        OrganizerRole organizerRole = null;
+        if (organizerRoleId != null && !organizerRoleId.isEmpty()) {
+            organizerRole = organizerRoleRepository.findById(organizerRoleId)
+                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+        }
+
+        user.setOrganizerRole(organizerRole);
+        userRepository.save(user);
+
+        return userMapper.toUserResponse(user);
+    }
 }

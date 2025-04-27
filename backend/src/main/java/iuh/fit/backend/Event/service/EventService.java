@@ -105,6 +105,86 @@ public class EventService {
 //    }
 
 
+//    @Transactional
+//    public EventResponse createEvent(EventCreateRequest request) {
+//        validateEventRequest(request);
+//
+//        // 1. Tạo event cơ bản (chưa có organizers)
+//        Event event = eventMapper.toEvent(request, userRepository, permissionRepository,
+//                organizerRoleRepository, positionRepository);
+//        event.setStatus(EventStatus.PENDING);
+//
+//        // 2. Lưu event trước để có ID
+//        event = eventRepository.save(event);
+//
+//        // 3. Tạo organizers và thiết lập quan hệ với event
+//        Set<EventOrganizer> organizers = new HashSet<>();
+//        Set<User> allMembers = new HashSet<>(); // Để dùng cho group chat
+//
+//        for (OrganizerRequest organizerRequest : request.getOrganizers()) {
+//            User user = userRepository.findById(organizerRequest.getUserId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+//            allMembers.add(user); // Thêm vào danh sách thành viên chat
+//
+//            OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+//            Position position = positionRepository.findById(organizerRequest.getPositionId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
+//
+//            EventOrganizer organizer = EventOrganizer.builder()
+//                    .event(event)
+//                    .user(user)
+//                    .organizerRole(role)
+//                    .position(position)
+//                    .build();
+//
+//            organizers.add(organizer);
+//        }
+//
+//        // 4. Tạo participants và thiết lập quan hệ với event
+//        Set<EventParticipant> participants = new HashSet<>();
+//        for (OrganizerRequest organizerRequest : request.getParticipants()) {
+//            User user = userRepository.findById(organizerRequest.getUserId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+//            allMembers.add(user); // Thêm vào danh sách thành viên chat
+//
+//            OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+//            Position position = positionRepository.findById(organizerRequest.getPositionId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
+//            EventParticipant participant = EventParticipant.builder()
+//                    .event(event)
+//                    .user(user)
+//                    .organizerRole(role)
+//                    .position(position)
+//                    .build();
+//
+//            participants.add(participant);
+//        }
+//
+//        // 5. Thiết lập quan hệ hai chiều
+//        event.setOrganizers(organizers);
+//        event.setParticipants(participants);
+//
+//        // 6. Tạo group chat cho event
+//        User creator = userRepository.findById(request.getCreatedBy())
+//                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+//
+//        GroupChat groupChat = new GroupChat();
+//        groupChat.setName(event.getName());
+//        groupChat.setEvent(event);
+//        groupChat.setGroupLeader(creator);
+//        groupChat.setMembers(allMembers);
+//        groupChat.setStatus(EventStatus.PENDING); // Đặt trạng thái ban đầu
+//
+//        event.setGroupChat(groupChat);
+//
+//        // 7. Lưu lại event (cascade sẽ tự động lưu organizers và group chat)
+//        event = eventRepository.save(event);
+//
+//        return eventMapper.toEventResponse(event);
+//    }
+
     @Transactional
     public EventResponse createEvent(EventCreateRequest request) {
         validateEventRequest(request);
@@ -126,16 +206,16 @@ public class EventService {
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
             allMembers.add(user); // Thêm vào danh sách thành viên chat
 
-            OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
-                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
-            Position position = positionRepository.findById(organizerRequest.getPositionId())
-                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
+//            OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+//            Position position = positionRepository.findById(organizerRequest.getPositionId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
 
             EventOrganizer organizer = EventOrganizer.builder()
                     .event(event)
                     .user(user)
-                    .organizerRole(role)
-                    .position(position)
+                    .organizerRole(user.getOrganizerRole())
+                    .position(user.getPosition())
                     .build();
 
             organizers.add(organizer);
