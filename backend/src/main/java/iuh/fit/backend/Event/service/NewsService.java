@@ -1,17 +1,21 @@
 package iuh.fit.backend.Event.service;
 
+import com.corundumstudio.socketio.SocketIOServer;
 import iuh.fit.backend.Event.Entity.Event;
 import iuh.fit.backend.Event.Entity.News;
 import iuh.fit.backend.Event.Entity.NewsHistory;
+import iuh.fit.backend.Event.Entity.Notification;
 import iuh.fit.backend.Event.dto.request.NewsCreateRequest;
 import iuh.fit.backend.Event.dto.request.NewsUpdateRequest;
 import iuh.fit.backend.Event.dto.response.NewsHistoryResponse;
 import iuh.fit.backend.Event.dto.response.NewsResponse;
 import iuh.fit.backend.Event.enums.NewsStatus;
+import iuh.fit.backend.Event.enums.NotificationType;
 import iuh.fit.backend.Event.mapper.NewsMapper;
 import iuh.fit.backend.Event.repository.EventRepository;
 import iuh.fit.backend.Event.repository.NewsHistoryRepository;
 import iuh.fit.backend.Event.repository.NewsRepository;
+import iuh.fit.backend.Event.repository.NotificationRepository;
 import iuh.fit.backend.identity.entity.User;
 import iuh.fit.backend.identity.exception.AppException;
 import iuh.fit.backend.identity.exception.ErrorCode;
@@ -27,21 +31,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class NewsService {
+    private final NotificationRepository notificationRepository;
     private final NewsHistoryRepository newsHistoryRepository;
     private final NewsRepository newsRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final NewsMapper newsMapper;
     private final CloudinaryService cloudinaryService;
+    private final SocketIOServer socketIOServer;
 
     private final UserMapper userMapper;
     @Transactional
@@ -90,6 +94,14 @@ public class NewsService {
         news.reject(reason); // Sử dụng method reject đã có trong entity
         news = newsRepository.save(news);
 
+        sendRealTimeNotification(
+                news.getCreatedBy().getId(),
+                "Tin tức bị từ chối",
+                "Tin tức '" + news.getTitle() + "' bị từ chối. Lý do: " + reason,
+                "NEWS_REJECTED",
+                newsId
+        );
+
         log.info("Đã từ chối tin tức ID: {}, lý do: {}", newsId, reason);
         return newsMapper.toNewsResponse(news);
     }
@@ -105,6 +117,15 @@ public class NewsService {
         news.approve(); // Sử dụng method approve đã có trong entity
         news.setPublishedAt(LocalDateTime.now()); // Cập nhật thời gian publish khi approve
         news = newsRepository.save(news);
+
+        // Gửi thông báo real-time
+        sendRealTimeNotification(
+                news.getCreatedBy().getId(),
+                "Tin tức đã được duyệt",
+                "Tin tức '" + news.getTitle() + "' của bạn đã được phê duyệt",
+                "NEWS_APPROVED",
+                newsId
+        );
 
         log.info("Đã phê duyệt tin tức ID: {}", newsId);
         return newsMapper.toNewsResponse(news);
@@ -177,6 +198,13 @@ public class NewsService {
         news.markAsDeleted(deletedBy);
         newsRepository.save(news);
         log.info("Đã đánh dấu tin tức {} là đã xóa bởi {}", newsId, deletedById);
+        sendRealTimeNotification(
+                news.getCreatedBy().getId(),
+                "Tin tức đã bị xóa",
+                "Tin tức '" + news.getTitle() + "' đã bị xóa bởi quản trị viên",
+                "NEWS_DELETED",
+                newsId
+        );
     }
 
     public Page<NewsResponse> getDeletedNews(Pageable pageable) {
@@ -327,5 +355,29 @@ public class NewsService {
                 .updatedBy(newsMapper.toUserBriefResponse(history.getUpdatedBy()))
                 .updatedAt(history.getUpdatedAt())
                 .build();
+    }
+    private void sendRealTimeNotification(String userId, String title, String message,
+                                          String type, String relatedId) {
+        // Tạo đối tượng Notification thực sự
+        Notification notificationEntity = Notification.builder()
+                .user(userRepository.findById(userId).orElseThrow()) // Lấy user từ database
+                .title(title)
+                .content(message)
+                .type(NotificationType.valueOf(type)) // Giả sử type là enum
+                .relatedId(relatedId)
+                .build();
+
+        // Gửi socket message (giữ nguyên)
+        Map<String, Object> socketMessage = new HashMap<>();
+        socketMessage.put("title", title);
+        socketMessage.put("message", message);
+        socketMessage.put("type", type);
+        socketMessage.put("relatedId", relatedId);
+        socketMessage.put("timestamp", new Date());
+        socketIOServer.getRoomOperations(userId).sendEvent("notification", socketMessage);
+
+        // Lưu vào database
+        notificationRepository.save(notificationEntity);
+        log.info("Sent real-time notification to user {}", userId);
     }
 }

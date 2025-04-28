@@ -68,12 +68,31 @@ public class SocketIOConfig {
 
         try {
             SocketIOServer server = new SocketIOServer(config);
+            setupNotificationHandlers(server);
             server.start(); // QUAN TRỌNG: Phải gọi start() thủ công
             System.out.println("Socket.IO REAL STARTED on port: " + config.getPort());
             return server;
         } catch (Exception e) {
             throw new IllegalStateException("Failed to start Socket.IO", e);
         }
+    }
+    private void setupNotificationHandlers(SocketIOServer server) {
+        // Lắng nghe kết nối mới
+        server.addConnectListener(client -> {
+            String userId = client.getHandshakeData().getSingleUrlParam("userId");
+            if (userId != null) {
+                client.joinRoom(userId); // Mỗi user có room riêng
+                logger.info("User {} connected to notification room", userId);
+            }
+        });
+
+        // Lắng nghe ngắt kết nối
+        server.addDisconnectListener(client -> {
+            String userId = client.getHandshakeData().getSingleUrlParam("userId");
+            if (userId != null) {
+                logger.info("User {} disconnected", userId);
+            }
+        });
     }
 
     private boolean validateToken(String token) {
