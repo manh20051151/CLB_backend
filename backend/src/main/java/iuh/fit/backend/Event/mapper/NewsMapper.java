@@ -2,8 +2,10 @@ package iuh.fit.backend.Event.mapper;
 
 import iuh.fit.backend.Event.Entity.Event;
 import iuh.fit.backend.Event.Entity.News;
+import iuh.fit.backend.Event.Entity.NewsHistory;
 import iuh.fit.backend.Event.dto.request.NewsCreateRequest;
 import iuh.fit.backend.Event.dto.response.EventBriefResponse;
+import iuh.fit.backend.Event.dto.response.NewsHistoryResponse;
 import iuh.fit.backend.Event.dto.response.NewsResponse;
 import iuh.fit.backend.Event.dto.response.UserBriefResponse;
 import iuh.fit.backend.identity.entity.User;
@@ -40,4 +42,6 @@ public interface NewsMapper {
 
     UserBriefResponse toUserBriefResponse(User user);
     EventBriefResponse toEventBriefResponse(Event event);
+
+    NewsHistoryResponse toNewsHistoryResponse(NewsHistory history);
 }

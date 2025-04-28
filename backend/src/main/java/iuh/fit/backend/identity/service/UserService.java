@@ -84,6 +84,12 @@ public class UserService {
                 .map(userMapper::toUserResponse).toList();
     }
 
+    public List<UserResponse> getUsersWithPositionAndOrganizerRole() {
+        return userRepository.findUsersWithPositionAndOrganizerRole().stream()
+                .map(userMapper::toUserResponse)
+                .toList();
+    }
+
     @PostAuthorize("returnObject.username == authentication.name")
     public UserResponse getUser(String id){
         return userMapper.toUserResponse(userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found")));

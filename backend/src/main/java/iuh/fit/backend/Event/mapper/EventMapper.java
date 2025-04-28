@@ -186,14 +186,34 @@ public interface EventMapper {
     }
 
     // Ánh xạ từ EventOrganizer → OrganizerResponse
+//    @Named("mapParticipantsToResponses")
+//    default Set<OrganizerResponse> mapParticipantsToResponses(Set<EventParticipant> participants) {
+//        if (participants == null || participants.isEmpty()) {
+//            return Collections.emptySet();
+//        }
+//        return participants.stream().map(o ->
+//                new OrganizerResponse(o.getUser().getId(), o.getOrganizerRole().getName(), o.getPosition().getName())
+//        ).collect(Collectors.toSet());
+//    }
+
     @Named("mapParticipantsToResponses")
     default Set<OrganizerResponse> mapParticipantsToResponses(Set<EventParticipant> participants) {
         if (participants == null || participants.isEmpty()) {
             return Collections.emptySet();
         }
-        return participants.stream().map(o ->
-                new OrganizerResponse(o.getUser().getId(), o.getOrganizerRole().getName(), o.getPosition().getName())
-        ).collect(Collectors.toSet());
+
+        return participants.stream()
+                .map(p -> {
+                    String roleName = p.getOrganizerRole() != null ? p.getOrganizerRole().getName() : null;
+                    String positionName = p.getPosition() != null ? p.getPosition().getName() : null;
+
+                    return new OrganizerResponse(
+                            p.getUser().getId(),
+                            roleName,
+                            positionName
+                    );
+                })
+                .collect(Collectors.toSet());
     }
 
 

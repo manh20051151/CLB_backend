@@ -6,6 +6,9 @@ import iuh.fit.backend.identity.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
+
 import java.time.LocalDateTime;
 import java.util.Date;
 
@@ -17,6 +20,8 @@ import java.util.Date;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@SQLDelete(sql = "UPDATE news SET deleted = true WHERE id = ?") // Câu lệnh SQL khi gọi delete
+@Where(clause = "deleted = false") // Tự động thêm điều kiện này vào các câu query
 public class News {
 
     @Id
@@ -62,6 +67,20 @@ public class News {
     @Column(name = "is_pinned")
     boolean pinned; // Tin ghim lên đầu
 
+
+    @Column(name = "deleted", nullable = false)
+    @Builder.Default
+    boolean deleted = false; // Mặc định là false (chưa xóa)
+
+    @Column(name = "deleted_at")
+    @Temporal(TemporalType.TIMESTAMP)
+    Date deletedAt; // Thời gian xóa
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "deleted_by")
+    User deletedBy; // Người thực hiện xóa
+
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = new Date();
@@ -70,14 +89,21 @@ public class News {
         }
     }
 
+    public void markAsDeleted(User deletedByUser) {
+        this.deleted = true;
+        this.deletedAt = new Date();
+        this.deletedBy = deletedByUser;
+    }
     public void reject(String reason) {
         this.status = NewsStatus.REJECTED;
         this.rejectionReason = reason;
+        this.publishedAt = null;
     }
 
     public void approve() {
         this.status = NewsStatus.APPROVED;
         this.rejectionReason = null;
+        this.publishedAt = LocalDateTime.now(); // Set thời gian publish khi approve
     }
 
     @Override

@@ -42,6 +42,8 @@ public enum ErrorCode {
 
     FILE_NOT_FOUND(3014, "Không tìm thấy file hoặc tin nhắn không chứa file", HttpStatus.NOT_FOUND),
     FILE_DOWNLOAD_ERROR(3015, "Lỗi khi tải file", HttpStatus.NOT_FOUND),
+    NEWS_NOT_FOUND(4001, "Lỗi không tìm thấy tin tức", HttpStatus.NOT_FOUND),
+    NEWS_NOT_DELETED(4002, "Lỗi Tin tức chưa bị xóa", HttpStatus.NOT_FOUND),
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

@@ -230,13 +230,13 @@ public class EventService {
 
             OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
                     .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
-            Position position = positionRepository.findById(organizerRequest.getPositionId())
-                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
+//            Position position = positionRepository.findById(organizerRequest.getPositionId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
             EventParticipant participant = EventParticipant.builder()
                     .event(event)
                     .user(user)
                     .organizerRole(role)
-                    .position(position)
+                    .position(user.getPosition())
                     .build();
 
             participants.add(participant);

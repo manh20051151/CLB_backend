@@ -41,6 +41,13 @@ public class UserController {
                 .build();
     }
 
+    @GetMapping("/with-position-and-role")
+    public ApiResponse<List<UserResponse>> getUsersWithPositionAndOrganizerRole() {
+        return ApiResponse.<List<UserResponse>>builder()
+                .result(userService.getUsersWithPositionAndOrganizerRole())
+                .build();
+    }
+
     @GetMapping("/{userId}")
     ApiResponse<UserResponse> getUser(@PathVariable String userId){
         return ApiResponse.<UserResponse>builder()

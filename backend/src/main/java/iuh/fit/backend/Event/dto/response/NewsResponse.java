@@ -26,4 +26,8 @@ public class NewsResponse {
     private boolean pinned;
     private UserBriefResponse createdBy;
     private EventBriefResponse event;
+
+    private boolean deleted;
+    private Date deletedAt;
+    private UserBriefResponse deletedBy;
 }
