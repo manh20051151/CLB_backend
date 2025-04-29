@@ -21,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -260,5 +262,35 @@ public class UserService {
         userRepository.save(user);
 
         return userMapper.toUserResponse(user);
+    }
+
+    // Khóa tài khoản
+    @Transactional
+    public void lockUser(String userId, String lockedById, String reason) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        User lockedBy = userRepository.findById(lockedById)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        user.lock(lockedBy, reason);
+        userRepository.save(user);
+    }
+
+    // Mở khóa tài khoản
+    @Transactional
+    public void unlockUser(String userId) {
+        User user = userRepository.findLockedUserById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_LOCKED));
+
+        user.unlock();
+        userRepository.save(user);
+    }
+
+    // Lấy danh sách tài khoản bị khóa
+    @Transactional(readOnly = true)
+    public Page<UserResponse> getLockedUsers(Pageable pageable) {
+        return userRepository.findLockedUsers(pageable)
+                .map(userMapper::toUserResponse);
     }
 }

@@ -1,5 +1,6 @@
 package iuh.fit.backend.Event.repository;
 
+import iuh.fit.backend.Event.Entity.Event;
 import iuh.fit.backend.Event.Entity.News;
 import iuh.fit.backend.Event.enums.NewsStatus;
 import iuh.fit.backend.Event.enums.NewsType;
@@ -58,10 +59,13 @@ public interface NewsRepository extends JpaRepository<News, String> {
     Page<News> findPinnedApprovedNews(Pageable pageable);
 
     // Query đặc biệt để lấy tin đã xóa (ghi đè @Where clause)
-    @Query("SELECT n FROM News n WHERE n.deleted = true")
+
+    @Query(value = "SELECT * FROM news WHERE deleted = true", nativeQuery = true)
     Page<News> findByDeletedTrue(Pageable pageable);
 
     // Query đặc biệt để tìm kiếm cả tin đã xóa
-    @Query("SELECT n FROM News n WHERE n.id = :id AND (n.deleted = false OR :includeDeleted = true)")
-    Optional<News> findByIdIncludeDeleted(@Param("id") String id, @Param("includeDeleted") boolean includeDeleted);
+//    @Query("SELECT n FROM News n WHERE n.id = :id AND (n.deleted = false OR :includeDeleted = true)")
+//    Optional<News> findByIdIncludeDeleted(@Param("id") String id, @Param("includeDeleted") boolean includeDeleted);
+    @Query(value = "SELECT * FROM News WHERE id = ?1 AND deleted = true", nativeQuery = true)
+    Optional<News> findDeletedNewtById(String newsId);
 }

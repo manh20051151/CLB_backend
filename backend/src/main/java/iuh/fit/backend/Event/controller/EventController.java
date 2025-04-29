@@ -10,6 +10,7 @@ import iuh.fit.backend.Event.dto.request.ChatMessageRequest;
 import iuh.fit.backend.Event.dto.request.EventCreateRequest;
 import iuh.fit.backend.Event.dto.request.EventUpdateRequest;
 import iuh.fit.backend.Event.dto.response.AttendeeResponse;
+import iuh.fit.backend.Event.dto.response.EventHistoryResponse;
 import iuh.fit.backend.Event.dto.response.EventResponse;
 import iuh.fit.backend.Event.dto.response.GroupChatResponse;
 import iuh.fit.backend.Event.enums.EventStatus;
@@ -28,6 +29,9 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -193,22 +197,75 @@ public class EventController {
     @PutMapping("/{eventId}")
     public ApiResponse<EventResponse> updateEvent(
             @PathVariable String eventId,
-            @RequestBody EventUpdateRequest request) {
+            @RequestBody EventUpdateRequest request,
+            @RequestParam String updatedByUserId) {
+
         return ApiResponse.<EventResponse>builder()
                 .code(1000)
-                .message("Cập nhật sự kiện thành công")
-                .result(eventService.updateEvent(eventId, request))
+                .message("Cập nhật sự kiện thành công. Sự kiện đã được chuyển về trạng thái chờ phê duyệt")
+                .result(eventService.updateEvent(eventId, request, updatedByUserId))
                 .build();
     }
 
-    @DeleteMapping("/{eventId}")
-    public ApiResponse<Void> deleteEvent(@PathVariable String eventId) {
-        eventService.deleteEvent(eventId);
-        return ApiResponse.<Void>builder()
+    @GetMapping("/{eventId}/history")
+    public ApiResponse<List<EventHistoryResponse>> getEventHistory(
+            @PathVariable String eventId) {
+        List<EventHistoryResponse> history = eventService.getEventHistory(eventId);
+        return ApiResponse.<List<EventHistoryResponse>>builder()
                 .code(1000)
-                .message("Xóa sự kiện thành công")
+                .result(history)
                 .build();
     }
+
+//    @DeleteMapping("/{eventId}")
+//    public ApiResponse<Void> deleteEvent(@PathVariable String eventId) {
+//        eventService.deleteEvent(eventId);
+//        return ApiResponse.<Void>builder()
+//                .code(1000)
+//                .message("Xóa sự kiện thành công")
+//                .build();
+//    }
+
+
+    @DeleteMapping("/{eventId}")
+//    @PreAuthorize("hasRole('ADMIN') or hasRole('EVENT_MANAGER')")
+    public ApiResponse<Void> deleteEvent(
+            @PathVariable String eventId,
+            @RequestParam String deletedById) {
+
+        eventService.deleteEvent(eventId, deletedById);
+        return ApiResponse.<Void>builder()
+                .code(1000)
+                .message("Đã đánh dấu sự kiện là đã xóa")
+                .build();
+    }
+
+    @GetMapping("/deleted")
+//    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Page<EventResponse>> getDeletedEvents(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        return ApiResponse.<Page<EventResponse>>builder()
+                .code(1000)
+                .message("Lấy danh sách sự kiện đã xóa thành công")
+                .result(eventService.getDeletedEvents(pageable))
+                .build();
+    }
+
+    @PutMapping("/{eventId}/restore")
+//    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<EventResponse> restoreEvent(
+            @PathVariable String eventId) {
+
+        return ApiResponse.<EventResponse>builder()
+                .code(1000)
+                .message("Khôi phục sự kiện thành công")
+                .result(eventService.restoreEvent(eventId))
+                .build();
+    }
+
     @GetMapping("/{eventId}/attendees/export")
     public ResponseEntity<Resource> exportAttendeesToExcel(@PathVariable String eventId) throws IOException {
         List<AttendeeResponse> attendees = eventService.getEventAttendees(eventId, null);
@@ -688,6 +745,15 @@ public class EventController {
                 .code(1000)
                 .message("Nhóm đã chuyển trạng thái Đang chờ xử lý thành công")
                 .result(eventService.deactivateGroup(groupId, leaderId))
+                .build();
+    }
+    @PatchMapping("/{eventId}/avatar")
+    public ApiResponse<EventResponse> updateAvatar(
+            @PathVariable String eventId,
+            @RequestPart("file") MultipartFile file) throws IOException {
+
+        return ApiResponse.<EventResponse>builder()
+                .result(eventService.updateEventAvatar(eventId, file))
                 .build();
     }
 }

@@ -15,6 +15,7 @@ public enum ErrorCode {
     UNAUTHENTICATED(1006,"Không xác thực", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(1007,"Không có quyền", HttpStatus.FORBIDDEN),
     INVALID_DOB(1008,"'Your age must be at least {min}", HttpStatus.BAD_REQUEST),
+    USER_NOT_LOCKED(1008,"Tài khoản không bị khóa", HttpStatus.BAD_REQUEST),
 
 
     EVENT_NOT_FOUND(2001, "Sự kiện không tồn tại", HttpStatus.NOT_FOUND),
@@ -39,6 +40,7 @@ public enum ErrorCode {
     LEADER_CANNOT_LEAVE(3011, "leader không được rời nhóm", HttpStatus.NOT_FOUND),
     PASSWORD_OLD_REQUIRED(3012, "Password cũ bắt buộc khi đổi mật khẩu", HttpStatus.NOT_FOUND),
     PASSWORD_OLD_NOT_MATCH(3013, "Password cũ không đúng", HttpStatus.NOT_FOUND),
+    EVENT_NOT_DELETED(3014, "Sự kiện chưa bị xóa", HttpStatus.NOT_FOUND),
 
     FILE_NOT_FOUND(3014, "Không tìm thấy file hoặc tin nhắn không chứa file", HttpStatus.NOT_FOUND),
     FILE_DOWNLOAD_ERROR(3015, "Lỗi khi tải file", HttpStatus.NOT_FOUND),

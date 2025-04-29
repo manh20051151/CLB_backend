@@ -9,7 +9,7 @@ import org.hibernate.annotations.SQLRestriction;
 import java.util.Date;
 
 @Entity
-@Table(name = "news_history")
+@Table(name = "event_history")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,14 +17,14 @@ import java.util.Date;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @SQLRestriction("(SELECT u.locked FROM user u WHERE u.id = user_id) = false")
-public class NewsHistory {
+public class EventHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "news_id", nullable = false)
-    News news;
+    @JoinColumn(name = "event_id", nullable = false)
+    Event event;
 
     @Column(nullable = false)
     String fieldName; // Tên trường thay đổi

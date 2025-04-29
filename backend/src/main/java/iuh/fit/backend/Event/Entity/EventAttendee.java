@@ -4,6 +4,8 @@ import iuh.fit.backend.identity.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.SQLRestriction;
+
 @Entity
 @Getter
 @Setter
@@ -11,6 +13,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@SQLRestriction("(SELECT u.locked FROM user u WHERE u.id = user_id) = false")
 public class EventAttendee {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

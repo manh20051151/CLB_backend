@@ -1,5 +1,6 @@
 package iuh.fit.backend.Event.dto.response;
 
+import iuh.fit.backend.Event.enums.EventProgressStatus;
 import iuh.fit.backend.Event.enums.EventStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -31,5 +32,12 @@ public class EventResponse {
     Set<String> permissions;
     String rejectionReason;
     Date createdAt;
+
+    boolean deleted;
+    Date deletedAt;
+    UserBriefResponse deletedBy;
+
+    EventProgressStatus progressStatus;
+    String avatarUrl;
 }
 

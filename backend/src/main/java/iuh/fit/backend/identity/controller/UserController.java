@@ -13,6 +13,9 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -120,6 +123,44 @@ public class UserController {
 
         return ApiResponse.<UserResponse>builder()
                 .result(userService.updateUserOrganizerRole(userId, organizerRoleId))
+                .build();
+    }
+
+    @PostMapping("/{userId}/lock")
+//    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> lockUser(
+            @PathVariable String userId,
+            @RequestParam String lockedById,
+            @RequestParam String reason) {
+
+        userService.lockUser(userId, lockedById, reason);
+        return ApiResponse.<Void>builder()
+                .code(1000)
+                .message("Đã khóa tài khoản thành công")
+                .build();
+    }
+
+    @PostMapping("/{userId}/unlock")
+//    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> unlockUser(@PathVariable String userId) {
+        userService.unlockUser(userId);
+        return ApiResponse.<Void>builder()
+                .code(1000)
+                .message("Đã mở khóa tài khoản thành công")
+                .build();
+    }
+
+    @GetMapping("/locked")
+//    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Page<UserResponse>> getLockedUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        return ApiResponse.<Page<UserResponse>>builder()
+                .code(1000)
+                .message("Lấy danh sách tài khoản bị khóa thành công")
+                .result(userService.getLockedUsers(pageable))
                 .build();
     }
 }

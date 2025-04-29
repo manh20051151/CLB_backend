@@ -4,6 +4,7 @@ import iuh.fit.backend.identity.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.util.Date;
 
@@ -16,6 +17,7 @@ import java.util.Date;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Table(name = "chat_messages")
+@SQLRestriction("(SELECT u.locked FROM user u WHERE u.id = user_id) = false")
 public class ChatMessage {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

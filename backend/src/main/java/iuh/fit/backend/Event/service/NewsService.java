@@ -79,7 +79,18 @@ public class NewsService {
         // Lưu vào database
         News savedNews = newsRepository.save(news);
         log.info("Tạo tin tức thành công với ID: {}", savedNews.getId());
-
+        // Gửi thông báo đến tất cả ADMIN khi tin tức mới được tạo
+        List<User> admins = userRepository.findByRoles_Name("ADMIN");
+        for (User admin : admins) {
+            sendRealTimeNotification(
+                    admin.getId(),
+                    "Tin tức mới đã được tạo",
+                    "Tin tức '" + savedNews.getTitle() + "' đã được tạo bởi " +
+                            creator.getFirstName() + " " + creator.getLastName(),
+                    NotificationType.NEW_NEWS_CREATED,
+                    savedNews.getId()
+            );
+        }
         return newsMapper.toNewsResponse(savedNews);
     }
 
@@ -98,7 +109,7 @@ public class NewsService {
                 news.getCreatedBy().getId(),
                 "Tin tức bị từ chối",
                 "Tin tức '" + news.getTitle() + "' bị từ chối. Lý do: " + reason,
-                "NEWS_REJECTED",
+                NotificationType.NEWS_REJECTED,
                 newsId
         );
 
@@ -123,7 +134,7 @@ public class NewsService {
                 news.getCreatedBy().getId(),
                 "Tin tức đã được duyệt",
                 "Tin tức '" + news.getTitle() + "' của bạn đã được phê duyệt",
-                "NEWS_APPROVED",
+                NotificationType.NEWS_APPROVED,
                 newsId
         );
 
@@ -201,8 +212,8 @@ public class NewsService {
         sendRealTimeNotification(
                 news.getCreatedBy().getId(),
                 "Tin tức đã bị xóa",
-                "Tin tức '" + news.getTitle() + "' đã bị xóa bởi quản trị viên",
-                "NEWS_DELETED",
+                "Tin tức '" + news.getTitle() + "' đã bị xóa bởi quản trị viên '" + deletedBy.getFirstName() + " " + deletedBy.getLastName() + "'",
+                NotificationType.NEWS_DELETED,
                 newsId
         );
     }
@@ -213,23 +224,23 @@ public class NewsService {
         return newsPage.map(newsMapper::toNewsResponse);
     }
 
-    public NewsResponse restoreNews(String newsId, String restoredById) {
-        News news = newsRepository.findById(newsId)
+    public NewsResponse restoreNews(String newsId) {
+        News news = newsRepository.findDeletedNewtById(newsId)
                 .orElseThrow(() -> new AppException(ErrorCode.NEWS_NOT_FOUND));
 
         if (!news.isDeleted()) {
             throw new AppException(ErrorCode.NEWS_NOT_DELETED);
         }
 
-        User restoredBy = userRepository.findById(restoredById)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+//        User restoredBy = userRepository.findById(restoredById)
+//                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         news.setDeleted(false);
         news.setDeletedAt(null);
         news.setDeletedBy(null);
 
         News restoredNews = newsRepository.save(news);
-        log.info("Đã khôi phục tin tức {} bởi {}", newsId, restoredById);
+        log.info("Đã khôi phục tin tức {} bởi {}", newsId);
 
         return newsMapper.toNewsResponse(restoredNews);
     }
@@ -282,6 +293,37 @@ public class NewsService {
         // Lưu news đã cập nhật
         News updatedNews = newsRepository.save(existingNews);
         log.info("Cập nhật tin tức thành công ID: {}", newsId);
+
+        // Kiểm tra role của người cập nhật để gửi thông báo phù hợp
+        boolean isAdmin = updatedBy.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("ADMIN"));
+
+        boolean isUser = updatedBy.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("USER"));
+
+        if (isAdmin) {
+            // Nếu người cập nhật là ADMIN, gửi thông báo cho USER tạo bài viết
+            sendRealTimeNotification(
+                    existingNews.getCreatedBy().getId(),
+                    "Tin tức đã được cập nhật",
+                    "Tin tức '" + existingNews.getTitle() + "' đã được cập nhật bởi quản trị viên " + updatedBy.getFirstName() + " " + updatedBy.getLastName() + "'",
+                    NotificationType.NEWS_UPDATED,
+                    newsId
+            );
+        } else if (isUser) {
+            // Nếu người cập nhật là USER, gửi thông báo cho tất cả ADMIN
+            List<User> admins = userRepository.findByRoles_Name("ADMIN");
+            for (User admin : admins) {
+                sendRealTimeNotification(
+                        admin.getId(),
+                        "Tin tức đã được cập nhật bởi người dùng",
+                        "Tin tức '" + existingNews.getTitle() + "' đã được cập nhật bởi người dùng " +
+                                updatedBy.getFirstName() + " " + updatedBy.getLastName(),
+                        NotificationType.NEWS_UPDATED_BY_USER,
+                        newsId
+                );
+            }
+        }
 
         return newsMapper.toNewsResponse(updatedNews);
     }
@@ -357,13 +399,13 @@ public class NewsService {
                 .build();
     }
     private void sendRealTimeNotification(String userId, String title, String message,
-                                          String type, String relatedId) {
+                                          NotificationType type, String relatedId) {
         // Tạo đối tượng Notification thực sự
         Notification notificationEntity = Notification.builder()
                 .user(userRepository.findById(userId).orElseThrow()) // Lấy user từ database
                 .title(title)
                 .content(message)
-                .type(NotificationType.valueOf(type)) // Giả sử type là enum
+                .type(type)
                 .relatedId(relatedId)
                 .build();
 
@@ -371,7 +413,7 @@ public class NewsService {
         Map<String, Object> socketMessage = new HashMap<>();
         socketMessage.put("title", title);
         socketMessage.put("message", message);
-        socketMessage.put("type", type);
+        socketMessage.put("type", type.name());
         socketMessage.put("relatedId", relatedId);
         socketMessage.put("timestamp", new Date());
         socketIOServer.getRoomOperations(userId).sendEvent("notification", socketMessage);

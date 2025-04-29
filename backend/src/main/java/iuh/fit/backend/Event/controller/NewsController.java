@@ -159,13 +159,12 @@ public class NewsController {
     @PutMapping("/{newsId}/restore")
 //    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<NewsResponse> restoreNews(
-            @PathVariable String newsId,
-            @RequestParam String restoredById) {
+            @PathVariable String newsId) {
 
         return ApiResponse.<NewsResponse>builder()
                 .code(1000)
                 .message("Khôi phục tin tức thành công")
-                .result(newsService.restoreNews(newsId, restoredById))
+                .result(newsService.restoreNews(newsId))
                 .build();
     }
     @PutMapping(value = "/{newsId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

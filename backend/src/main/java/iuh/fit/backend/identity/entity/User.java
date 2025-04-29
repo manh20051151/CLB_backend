@@ -5,8 +5,10 @@ import iuh.fit.backend.Event.Entity.Position;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
+import java.util.Date;
 import java.util.Set;
 
 @Entity
@@ -17,6 +19,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@SQLRestriction("locked = false") // Tự động thêm điều kiện này vào các câu query
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -46,6 +49,36 @@ public class User {
     @ManyToMany
     Set<Role> roles;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    boolean locked = false; // Trạng thái khóa tài khoản
+
+    @Column(name = "locked_at")
+    @Temporal(TemporalType.TIMESTAMP)
+    Date lockedAt; // Thời điểm khóa
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "locked_by")
+    User lockedBy; // Người thực hiện khóa
+
+    @Column(name = "lock_reason")
+    String lockReason; // Lý do khóa
+
+    // Phương thức khóa tài khoản
+    public void lock(User lockedByUser, String reason) {
+        this.locked = true;
+        this.lockedAt = new Date();
+        this.lockedBy = lockedByUser;
+        this.lockReason = reason;
+    }
+
+    // Phương thức mở khóa tài khoản
+    public void unlock() {
+        this.locked = false;
+        this.lockedAt = null;
+        this.lockedBy = null;
+        this.lockReason = null;
+    }
 
     @Override
     public boolean equals(Object o) {

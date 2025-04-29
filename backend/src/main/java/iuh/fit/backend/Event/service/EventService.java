@@ -6,14 +6,15 @@ import iuh.fit.backend.Event.dto.request.EventCreateRequest;
 import iuh.fit.backend.Event.dto.request.EventUpdateRequest;
 import iuh.fit.backend.Event.dto.request.OrganizerRequest;
 import iuh.fit.backend.Event.dto.response.AttendeeResponse;
+import iuh.fit.backend.Event.dto.response.EventHistoryResponse;
 import iuh.fit.backend.Event.dto.response.EventResponse;
 import iuh.fit.backend.Event.dto.response.GroupChatResponse;
+import iuh.fit.backend.Event.enums.EventProgressStatus;
 import iuh.fit.backend.Event.enums.EventStatus;
+import iuh.fit.backend.Event.enums.NotificationType;
 import iuh.fit.backend.Event.mapper.EventMapper;
-import iuh.fit.backend.Event.repository.EventRepository;
-import iuh.fit.backend.Event.repository.GroupChatRepository;
-import iuh.fit.backend.Event.repository.OrganizerRoleRepository;
-import iuh.fit.backend.Event.repository.PositionRepository;
+import iuh.fit.backend.Event.mapper.NewsMapper;
+import iuh.fit.backend.Event.repository.*;
 import iuh.fit.backend.identity.entity.Permission;
 import iuh.fit.backend.identity.entity.User;
 import iuh.fit.backend.identity.exception.AppException;
@@ -21,17 +22,27 @@ import iuh.fit.backend.identity.exception.ErrorCode;
 import iuh.fit.backend.identity.repository.PermissionRepository;
 import iuh.fit.backend.identity.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
+import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EventService {
+    private final EventHistoryRepository eventHistoryRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
 
@@ -43,6 +54,11 @@ public class EventService {
     private final GroupChatRepository groupChatRepository;
 
     private final SocketIOServer socketIOServer;
+    private final NotificationRepository notificationRepository;
+
+    private final NewsMapper newsMapper;
+    private final CloudinaryService cloudinaryService;
+    private static final int DEFAULT_DURATION_MINUTES = 1440; // 1 ngày
 //    @Transactional
 //    public EventResponse createEvent(EventCreateRequest request) {
 //        validateEventRequest(request);
@@ -262,6 +278,20 @@ public class EventService {
         // 7. Lưu lại event (cascade sẽ tự động lưu organizers và group chat)
         event = eventRepository.save(event);
 
+
+        // Gửi thông báo đến tất cả ADMIN khi tin tức mới được tạo
+        List<User> admins = userRepository.findByRoles_Name("ADMIN");
+        for (User admin : admins) {
+            sendRealTimeNotification(
+                    admin.getId(),
+                    "Sự kiện mới đã được tạo",
+                    "Sự kiện '" + event.getName() + "' đã được tạo bởi " +
+                            creator.getFirstName() + " " + creator.getLastName(),
+                    NotificationType.NEW_NEWS_CREATED,
+                    event.getId()
+            );
+        }
+
         return eventMapper.toEventResponse(event);
     }
 
@@ -426,7 +456,13 @@ public class EventService {
         }
 
         event = eventRepository.save(event);
-
+        sendRealTimeNotification(
+                event.getCreatedBy().getId(),
+                "Sự kiện bị từ chối",
+                "Sự kiện '" + event.getName() + "' bị từ chối. Lý do: " + reason,
+                NotificationType.NEWS_REJECTED,
+                eventId
+        );
         return eventMapper.toEventResponse(event);
     }
 
@@ -444,7 +480,14 @@ public class EventService {
         }
 
         event = eventRepository.save(event);
-
+        // Gửi thông báo real-time
+        sendRealTimeNotification(
+                event.getCreatedBy().getId(),
+                "Sự kiện đã được duyệt",
+                "Sự kiện '" + event.getName() + "' của bạn đã được phê duyệt",
+                NotificationType.NEWS_APPROVED,
+                eventId
+        );
         return eventMapper.toEventResponse(event);
     }
 
@@ -474,13 +517,122 @@ public class EventService {
             throw new AppException(ErrorCode.INVALID_EVENT_CONTENT);
         }
     }
-    public EventResponse updateEvent(String eventId, EventUpdateRequest request) {
+//    public EventResponse updateEvent(String eventId, EventUpdateRequest request) {
+//        // 1. Tìm event hiện tại
+//        Event existingEvent = eventRepository.findById(eventId)
+//                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+//
+//        // 2. Validate request
+//        validateEventUpdateRequest(request);
+//
+//        // 3. Cập nhật thông tin cơ bản
+//        existingEvent.setName(request.getName());
+//        existingEvent.setPurpose(request.getPurpose());
+//        existingEvent.setTime(request.getTime());
+//        existingEvent.setLocation(request.getLocation());
+//        existingEvent.setContent(request.getContent());
+//
+//        // 4. Xử lý organizers - không clear() mà xóa từng phần tử riêng lẻ
+//        // Xóa organizers không còn trong request
+//        existingEvent.getOrganizers().removeIf(existingOrg ->
+//                request.getOrganizers().stream()
+//                        .noneMatch(reqOrg ->
+//                                reqOrg.getUserId().equals(existingOrg.getUser().getId()) &&
+//                                        reqOrg.getRoleId().equals(existingOrg.getOrganizerRole().getId()) &&
+//                                        reqOrg.getPositionId().equals(existingOrg.getPosition().getId())
+//                        )
+//        );
+//
+//        // Thêm organizers mới
+//        for (OrganizerRequest organizerRequest : request.getOrganizers()) {
+//            boolean exists = existingEvent.getOrganizers().stream()
+//                    .anyMatch(org ->
+//                            organizerRequest.getUserId().equals(org.getUser().getId()) &&
+//                                    organizerRequest.getRoleId().equals(org.getOrganizerRole().getId()) &&
+//                                    organizerRequest.getPositionId().equals(org.getPosition().getId())
+//                    );
+//
+//            if (!exists) {
+//                User user = userRepository.findById(organizerRequest.getUserId())
+//                        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+//                OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
+//                        .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+//                Position position = positionRepository.findById(organizerRequest.getPositionId())
+//                        .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
+//
+//                EventOrganizer organizer = EventOrganizer.builder()
+//                        .event(existingEvent)
+//                        .user(user)
+//                        .organizerRole(role)
+//                        .position(position)
+//                        .build();
+//
+//                existingEvent.getOrganizers().add(organizer);
+//            }
+//        }
+//
+//        // 5. Xử lý participants tương tự organizers
+//        existingEvent.getParticipants().removeIf(existingPart ->
+//                request.getParticipants().stream()
+//                        .noneMatch(reqPart ->
+//                                reqPart.getUserId().equals(existingPart.getUser().getId()) &&
+//                                        reqPart.getRoleId().equals(existingPart.getOrganizerRole().getId()) &&
+//                                        reqPart.getPositionId().equals(existingPart.getPosition().getId())
+//                        )
+//        );
+//
+//        for (OrganizerRequest participantRequest : request.getParticipants()) {
+//            boolean exists = existingEvent.getParticipants().stream()
+//                    .anyMatch(part ->
+//                            participantRequest.getUserId().equals(part.getUser().getId()) &&
+//                                    participantRequest.getRoleId().equals(part.getOrganizerRole().getId()) &&
+//                                    participantRequest.getPositionId().equals(part.getPosition().getId())
+//                    );
+//
+//            if (!exists) {
+//                User user = userRepository.findById(participantRequest.getUserId())
+//                        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+//                OrganizerRole role = organizerRoleRepository.findById(participantRequest.getRoleId())
+//                        .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+//                Position position = positionRepository.findById(participantRequest.getPositionId())
+//                        .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
+//
+//                EventParticipant participant = EventParticipant.builder()
+//                        .event(existingEvent)
+//                        .user(user)
+//                        .organizerRole(role)
+//                        .position(position)
+//                        .build();
+//
+//                existingEvent.getParticipants().add(participant);
+//            }
+//        }
+//
+//        // 6. Lưu lại
+//        Event updatedEvent = eventRepository.save(existingEvent);
+//        return eventMapper.toEventResponse(updatedEvent);
+//    }
+
+    @Transactional
+    public EventResponse updateEvent(String eventId, EventUpdateRequest request, String updatedByUserId) {
         // 1. Tìm event hiện tại
         Event existingEvent = eventRepository.findById(eventId)
                 .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
 
+        // Lấy thông tin người cập nhật
+        User updatedBy = userRepository.findById(updatedByUserId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // Tạo bản sao của event trước khi cập nhật để so sánh
+        Event oldEvent = new Event();
+        BeanUtils.copyProperties(existingEvent, oldEvent);
+
         // 2. Validate request
         validateEventUpdateRequest(request);
+
+        // Chuyển trạng thái về PENDING khi cập nhật
+        existingEvent.setStatus(EventStatus.PENDING);
+        existingEvent.setRejectionReason(null); // Xóa lý do từ chối cũ nếu có
 
         // 3. Cập nhật thông tin cơ bản
         existingEvent.setName(request.getName());
@@ -494,9 +646,7 @@ public class EventService {
         existingEvent.getOrganizers().removeIf(existingOrg ->
                 request.getOrganizers().stream()
                         .noneMatch(reqOrg ->
-                                reqOrg.getUserId().equals(existingOrg.getUser().getId()) &&
-                                        reqOrg.getRoleId().equals(existingOrg.getOrganizerRole().getId()) &&
-                                        reqOrg.getPositionId().equals(existingOrg.getPosition().getId())
+                                reqOrg.getUserId().equals(existingOrg.getUser().getId())
                         )
         );
 
@@ -504,27 +654,27 @@ public class EventService {
         for (OrganizerRequest organizerRequest : request.getOrganizers()) {
             boolean exists = existingEvent.getOrganizers().stream()
                     .anyMatch(org ->
-                            organizerRequest.getUserId().equals(org.getUser().getId()) &&
-                                    organizerRequest.getRoleId().equals(org.getOrganizerRole().getId()) &&
-                                    organizerRequest.getPositionId().equals(org.getPosition().getId())
+                            organizerRequest.getUserId().equals(org.getUser().getId())
                     );
 
             if (!exists) {
                 User user = userRepository.findById(organizerRequest.getUserId())
                         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-                OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
-                        .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
-                Position position = positionRepository.findById(organizerRequest.getPositionId())
-                        .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
 
                 EventOrganizer organizer = EventOrganizer.builder()
                         .event(existingEvent)
                         .user(user)
-                        .organizerRole(role)
-                        .position(position)
+                        .organizerRole(user.getOrganizerRole()) // Lấy từ user thay vì request
+                        .position(user.getPosition()) // Lấy từ user thay vì request
                         .build();
 
                 existingEvent.getOrganizers().add(organizer);
+
+                // Thêm user vào group chat nếu chưa có
+                if (existingEvent.getGroupChat() != null &&
+                        !existingEvent.getGroupChat().getMembers().contains(user)) {
+                    existingEvent.getGroupChat().getMembers().add(user);
+                }
             }
         }
 
@@ -532,18 +682,14 @@ public class EventService {
         existingEvent.getParticipants().removeIf(existingPart ->
                 request.getParticipants().stream()
                         .noneMatch(reqPart ->
-                                reqPart.getUserId().equals(existingPart.getUser().getId()) &&
-                                        reqPart.getRoleId().equals(existingPart.getOrganizerRole().getId()) &&
-                                        reqPart.getPositionId().equals(existingPart.getPosition().getId())
+                                reqPart.getUserId().equals(existingPart.getUser().getId())
                         )
         );
 
         for (OrganizerRequest participantRequest : request.getParticipants()) {
             boolean exists = existingEvent.getParticipants().stream()
                     .anyMatch(part ->
-                            participantRequest.getUserId().equals(part.getUser().getId()) &&
-                                    participantRequest.getRoleId().equals(part.getOrganizerRole().getId()) &&
-                                    participantRequest.getPositionId().equals(part.getPosition().getId())
+                            participantRequest.getUserId().equals(part.getUser().getId())
                     );
 
             if (!exists) {
@@ -551,37 +697,274 @@ public class EventService {
                         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
                 OrganizerRole role = organizerRoleRepository.findById(participantRequest.getRoleId())
                         .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
-                Position position = positionRepository.findById(participantRequest.getPositionId())
-                        .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
 
                 EventParticipant participant = EventParticipant.builder()
                         .event(existingEvent)
                         .user(user)
                         .organizerRole(role)
-                        .position(position)
+                        .position(user.getPosition()) // Lấy từ user thay vì request
                         .build();
 
                 existingEvent.getParticipants().add(participant);
+
+                // Thêm user vào group chat nếu chưa có
+                if (existingEvent.getGroupChat() != null &&
+                        !existingEvent.getGroupChat().getMembers().contains(user)) {
+                    existingEvent.getGroupChat().getMembers().add(user);
+                }
             }
         }
 
-        // 6. Lưu lại
+        // 6. Cập nhật tên group chat nếu tên event thay đổi
+        if (existingEvent.getGroupChat() != null &&
+                !existingEvent.getGroupChat().getName().equals(existingEvent.getName())) {
+            existingEvent.getGroupChat().setName(existingEvent.getName());
+        }
+
+        // Lưu lịch sử thay đổi
+        saveEventChanges(oldEvent, existingEvent, updatedBy);
+        // 7. Lưu lại
         Event updatedEvent = eventRepository.save(existingEvent);
+
+        // Kiểm tra role của người cập nhật để gửi thông báo phù hợp
+        boolean isAdmin = updatedBy.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("ADMIN"));
+
+        boolean isUser = updatedBy.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("USER"));
+
+        if (isAdmin) {
+            // Nếu người cập nhật là ADMIN, gửi thông báo cho USER tạo bài viết
+            sendRealTimeNotification(
+                    existingEvent.getCreatedBy().getId(),
+                    "Sự kiện đã được cập nhật",
+                    "Sự kiện '" + existingEvent.getName() + "' đã được cập nhật bởi quản trị viên " + updatedBy.getFirstName() + " " + updatedBy.getLastName() + "'",
+                    NotificationType.NEWS_UPDATED,
+                    eventId
+            );
+        } else if (isUser) {
+            // Nếu người cập nhật là USER, gửi thông báo cho tất cả ADMIN
+            List<User> admins = userRepository.findByRoles_Name("ADMIN");
+            for (User admin : admins) {
+                sendRealTimeNotification(
+                        admin.getId(),
+                        "Sự kiện đã được cập nhật bởi người dùng",
+                        "Sự kiện '" + existingEvent.getName() + "' đã được cập nhật bởi người dùng " +
+                                updatedBy.getFirstName() + " " + updatedBy.getLastName(),
+                        NotificationType.NEWS_UPDATED_BY_USER,
+                        eventId
+                );
+            }
+        }
+
+
         return eventMapper.toEventResponse(updatedEvent);
     }
 
-    public void deleteEvent(String eventId) {
-        // 1. Kiểm tra tồn tại
+    private void saveEventChanges(Event oldEvent, Event newEvent, User updatedBy) {
+        List<EventHistory> changes = new ArrayList<>();
+
+        // Kiểm tra từng trường thay đổi
+        if (!Objects.equals(oldEvent.getName(), newEvent.getName())) {
+            changes.add(createHistoryRecord(newEvent, "name",
+                    oldEvent.getName(), newEvent.getName(), updatedBy));
+        }
+
+        if (!Objects.equals(oldEvent.getPurpose(), newEvent.getPurpose())) {
+            changes.add(createHistoryRecord(newEvent, "purpose",
+                    oldEvent.getPurpose(), newEvent.getPurpose(), updatedBy));
+        }
+
+        if (!Objects.equals(oldEvent.getTime(), newEvent.getTime())) {
+            changes.add(createHistoryRecord(newEvent, "time",
+                    oldEvent.getTime() != null ? oldEvent.getTime().toString() : null,
+                    newEvent.getTime() != null ? newEvent.getTime().toString() : null,
+                    updatedBy));
+        }
+
+        if (!Objects.equals(oldEvent.getLocation(), newEvent.getLocation())) {
+            changes.add(createHistoryRecord(newEvent, "location",
+                    oldEvent.getLocation(), newEvent.getLocation(), updatedBy));
+        }
+
+        if (!Objects.equals(oldEvent.getContent(), newEvent.getContent())) {
+            changes.add(createHistoryRecord(newEvent, "content",
+                    oldEvent.getContent(), newEvent.getContent(), updatedBy));
+        }
+
+        if (!Objects.equals(oldEvent.getStatus(), newEvent.getStatus())) {
+            changes.add(createHistoryRecord(newEvent, "status",
+                    oldEvent.getStatus() != null ? oldEvent.getStatus().name() : null,
+                    newEvent.getStatus() != null ? newEvent.getStatus().name() : null,
+                    updatedBy));
+        }
+
+//        // Lưu thay đổi organizers
+//        if (!Objects.equals(oldEvent.getOrganizers(), newEvent.getOrganizers())) {
+//            String oldOrganizers = oldEvent.getOrganizers().stream()
+//                    .map(org -> org.getUser().getId())
+//                    .collect(Collectors.joining(","));
+//            String newOrganizers = newEvent.getOrganizers().stream()
+//                    .map(org -> org.getUser().getId())
+//                    .collect(Collectors.joining(","));
+//
+//            changes.add(createHistoryRecord(newEvent, "organizers",
+//                    oldOrganizers, newOrganizers, updatedBy));
+//        }
+//
+//        // Lưu thay đổi participants
+//        if (!Objects.equals(oldEvent.getParticipants(), newEvent.getParticipants())) {
+//            String oldParticipants = oldEvent.getParticipants().stream()
+//                    .map(part -> part.getUser().getId())
+//                    .collect(Collectors.joining(","));
+//            String newParticipants = newEvent.getParticipants().stream()
+//                    .map(part -> part.getUser().getId())
+//                    .collect(Collectors.joining(","));
+//
+//            changes.add(createHistoryRecord(newEvent, "participants",
+//                    oldParticipants, newParticipants, updatedBy));
+//        }
+
+
+        // Xử lý organizers
+        Set<String> oldOrganizerIds = oldEvent.getOrganizers().stream()
+                .map(org -> org.getUser().getId())
+                .collect(Collectors.toSet());
+
+        Set<String> newOrganizerIds = newEvent.getOrganizers().stream()
+                .map(org -> org.getUser().getId())
+                .collect(Collectors.toSet());
+
+        // Tìm organizers bị xóa
+        Set<String> removedOrganizers = new HashSet<>(oldOrganizerIds);
+        removedOrganizers.removeAll(newOrganizerIds);
+        for (String userId : removedOrganizers) {
+            changes.add(createHistoryRecord(newEvent, "organizer_removed",
+                    userId, null, updatedBy));
+        }
+
+        // Tìm organizers được thêm
+        Set<String> addedOrganizers = new HashSet<>(newOrganizerIds);
+        addedOrganizers.removeAll(oldOrganizerIds);
+        for (String userId : addedOrganizers) {
+            changes.add(createHistoryRecord(newEvent, "organizer_added",
+                    null, userId, updatedBy));
+        }
+
+        // Xử lý participants tương tự
+        Set<String> oldParticipantIds = oldEvent.getParticipants().stream()
+                .map(part -> part.getUser().getId())
+                .collect(Collectors.toSet());
+
+        Set<String> newParticipantIds = newEvent.getParticipants().stream()
+                .map(part -> part.getUser().getId())
+                .collect(Collectors.toSet());
+
+        // Tìm participants bị xóa
+        Set<String> removedParticipants = new HashSet<>(oldParticipantIds);
+        removedParticipants.removeAll(newParticipantIds);
+        for (String userId : removedParticipants) {
+            changes.add(createHistoryRecord(newEvent, "participant_removed",
+                    userId, null, updatedBy));
+        }
+
+        // Tìm participants được thêm
+        Set<String> addedParticipants = new HashSet<>(newParticipantIds);
+        addedParticipants.removeAll(oldParticipantIds);
+        for (String userId : addedParticipants) {
+            changes.add(createHistoryRecord(newEvent, "participant_added",
+                    null, userId, updatedBy));
+        }
+
+
+
+        // Lưu tất cả thay đổi
+        if (!changes.isEmpty()) {
+            eventHistoryRepository.saveAll(changes);
+            log.info("Đã lưu {} thay đổi cho sự kiện ID: {}", changes.size(), newEvent.getId());
+        }
+    }
+
+    private EventHistory createHistoryRecord(Event event, String fieldName,
+                                             String oldValue, String newValue, User updatedBy) {
+        return EventHistory.builder()
+                .event(event)
+                .fieldName(fieldName)
+                .oldValue(oldValue)
+                .newValue(newValue)
+                .updatedBy(updatedBy)
+                .build();
+    }
+
+    public List<EventHistoryResponse> getEventHistory(String eventId) {
+        return eventHistoryRepository.findByEventIdOrderByUpdatedAtDesc(eventId).stream()
+                .map(this::toEventHistoryResponse)
+                .collect(Collectors.toList());
+    }
+
+    private EventHistoryResponse toEventHistoryResponse(EventHistory history) {
+        return EventHistoryResponse.builder()
+                .id(history.getId())
+                .fieldName(history.getFieldName())
+                .oldValue(history.getOldValue())
+                .newValue(history.getNewValue())
+                .updatedBy(newsMapper.toUserBriefResponse(history.getUpdatedBy()))
+                .updatedAt(history.getUpdatedAt())
+                .build();
+    }
+
+//    public void deleteEvent(String eventId) {
+//        // 1. Kiểm tra tồn tại
+//        Event event = eventRepository.findById(eventId)
+//                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+//
+//        // 2. Xóa tất cả quan hệ trước (nếu cần)
+//        event.getOrganizers().clear();
+//        event.getParticipants().clear();
+//        eventRepository.save(event); // Xóa quan hệ trước khi xóa event
+//
+//        // 3. Xóa event
+//        eventRepository.delete(event);
+//    }
+
+    public void deleteEvent(String eventId, String deletedById) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
 
-        // 2. Xóa tất cả quan hệ trước (nếu cần)
-        event.getOrganizers().clear();
-        event.getParticipants().clear();
-        eventRepository.save(event); // Xóa quan hệ trước khi xóa event
+        User deletedBy = userRepository.findById(deletedById)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // 3. Xóa event
-        eventRepository.delete(event);
+        event.markAsDeleted(deletedBy);
+        eventRepository.save(event);
+
+        log.info("Đã đánh dấu xóa sự kiện {} bởi {}", eventId, deletedById);
+    }
+
+    public Page<EventResponse> getDeletedEvents(Pageable pageable) {
+        Page<Event> eventPage = eventRepository.findByDeletedTrue(pageable);
+        return eventPage.map(eventMapper::toEventResponse);
+    }
+
+    public EventResponse restoreEvent(String eventId) {
+        Event event = eventRepository.findDeletedEventById(eventId)
+                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+
+        if (!event.isDeleted()) {
+            throw new AppException(ErrorCode.EVENT_NOT_DELETED);
+        }
+
+//        User restoredBy = userRepository.findById(restoredById)
+//                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        event.setDeleted(false);
+        event.setDeletedAt(null);
+        event.setDeletedBy(null);
+        event.setStatus(EventStatus.PENDING); // Hoặc status phù hợp khi restore
+
+        Event restoredEvent = eventRepository.save(event);
+//        log.info("Đã khôi phục sự kiện {} bởi {}", eventId, restoredById);
+
+        return eventMapper.toEventResponse(restoredEvent);
     }
 
     @Transactional(readOnly = true)
@@ -774,5 +1157,64 @@ public class EventService {
         }
     }
 
+    private void sendRealTimeNotification(String userId, String title, String message,
+                                          NotificationType type, String relatedId) {
+        // Tạo đối tượng Notification thực sự
+        Notification notificationEntity = Notification.builder()
+                .user(userRepository.findById(userId).orElseThrow()) // Lấy user từ database
+                .title(title)
+                .content(message)
+                .type(type)
+                .relatedId(relatedId)
+                .build();
 
+        // Gửi socket message (giữ nguyên)
+        Map<String, Object> socketMessage = new HashMap<>();
+        socketMessage.put("title", title);
+        socketMessage.put("message", message);
+        socketMessage.put("type", type.name());
+        socketMessage.put("relatedId", relatedId);
+        socketMessage.put("timestamp", new Date());
+        socketIOServer.getRoomOperations(userId).sendEvent("notification", socketMessage);
+
+        // Lưu vào database
+        notificationRepository.save(notificationEntity);
+        log.info("Sent real-time notification to user {}", userId);
+    }
+
+    @Scheduled(cron = "0/30 * * * * *")
+    @Transactional
+    public void updateEventStatuses() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startTime = now.minusMinutes(DEFAULT_DURATION_MINUTES);
+
+        List<Event> eventsToUpdate = eventRepository.findEventsForStatusUpdate(startTime, now);
+
+        eventsToUpdate.forEach(event -> {
+            LocalDateTime endTime = event.getTime().plusMinutes(DEFAULT_DURATION_MINUTES);
+
+            if (now.isBefore(event.getTime())) {
+                event.setProgressStatus(EventProgressStatus.UPCOMING);
+            }
+            else if (now.isBefore(endTime)) {
+                event.setProgressStatus(EventProgressStatus.ONGOING);
+            }
+            else {
+                event.setProgressStatus(EventProgressStatus.COMPLETED);
+            }
+        });
+
+        eventRepository.saveAll(eventsToUpdate);
+        log.info("Đã cập nhật trạng thái cho {} sự kiện", eventsToUpdate.size());
+    }
+
+    public EventResponse updateEventAvatar(String eventId, MultipartFile file) throws IOException {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+
+        String avatarUrl = cloudinaryService.uploadFile(file);
+        event.setAvatarUrl(avatarUrl);
+
+        return eventMapper.toEventResponse(eventRepository.save(event));
+    }
 }

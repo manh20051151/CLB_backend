@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
@@ -21,7 +22,17 @@ import java.util.Date;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @SQLDelete(sql = "UPDATE news SET deleted = true WHERE id = ?") // Câu lệnh SQL khi gọi delete
-@Where(clause = "deleted = false") // Tự động thêm điều kiện này vào các câu query
+//@SQLRestriction("deleted = false") // Thay thế cho @Where
+//@SQLRestriction("(SELECT u.locked FROM user u WHERE u.id = user_id) = false")
+//@SQLRestriction("""
+//    deleted = false AND
+//    created_by IN (SELECT u.id FROM user u WHERE u.locked = false)
+//    """)
+@SQLRestriction("""
+    deleted = false AND 
+    created_by IN (SELECT u.id FROM user u WHERE u.locked = false) AND
+    (event_id IS NULL OR event_id IN (SELECT e.id FROM event e WHERE e.deleted = false))
+    """)
 public class News {
 
     @Id

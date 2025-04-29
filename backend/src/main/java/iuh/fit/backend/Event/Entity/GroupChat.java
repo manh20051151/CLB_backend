@@ -6,6 +6,7 @@ import iuh.fit.backend.identity.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.util.Date;
 import java.util.HashSet;
@@ -20,6 +21,10 @@ import java.util.Set;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Table(name = "group_chats")
+@SQLRestriction("""
+    group_leader_id IN (SELECT u.id FROM user u WHERE u.locked = false) AND
+    event_id IN (SELECT e.id FROM event e WHERE e.deleted = false)
+    """)
 public class GroupChat {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
