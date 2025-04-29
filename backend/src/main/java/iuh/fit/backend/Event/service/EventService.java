@@ -388,7 +388,7 @@ public class EventService {
         EventAttendee attendee = new EventAttendee();
         attendee.setEvent(event);
         attendee.setUser(user);
-        attendee.setAttending(true); // Mặc định tham gia
+        attendee.setAttending(false); // Mặc định tham gia
 
         event.getAttendees().add(attendee);
 
