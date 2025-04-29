@@ -64,6 +64,12 @@ public class User {
     @Column(name = "lock_reason")
     String lockReason; // Lý do khóa
 
+    @Column(name = "qr_code_url")
+    private String qrCodeUrl; // URL hình ảnh QR code
+
+    @Column(name = "qr_code_data")
+    private String qrCodeData; // Dữ liệu được mã hóa trong QR code (thường là userId)
+
     // Phương thức khóa tài khoản
     public void lock(User lockedByUser, String reason) {
         this.locked = true;

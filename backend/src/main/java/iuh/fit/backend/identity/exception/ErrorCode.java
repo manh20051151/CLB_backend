@@ -41,6 +41,13 @@ public enum ErrorCode {
     PASSWORD_OLD_REQUIRED(3012, "Password cũ bắt buộc khi đổi mật khẩu", HttpStatus.NOT_FOUND),
     PASSWORD_OLD_NOT_MATCH(3013, "Password cũ không đúng", HttpStatus.NOT_FOUND),
     EVENT_NOT_DELETED(3014, "Sự kiện chưa bị xóa", HttpStatus.NOT_FOUND),
+    EVENT_NOT_IN_PROGRESS(3015, "Sự kiện chưa bắt đầu hoặc đã kết thúc", HttpStatus.NOT_FOUND),
+    ATTENDEE_NOT_REGISTERED(3016, "Người dùng chưa đăng ký tham gia sự kiện", HttpStatus.NOT_FOUND),
+    ATTENDEE_ALREADY_CHECKED_IN(3017, "Người dùng đã được điểm danh trước đó", HttpStatus.NOT_FOUND),
+    QR_CODE_NOT_GENERATED(3018, "QR_CODE chưa được tạo", HttpStatus.NOT_FOUND),
+    QR_CODE_GENERATION_FAILED(3019, "QR_CODE thất bại", HttpStatus.NOT_FOUND),
+    INVALID_QR_FORMAT(3020, "Định dạng QR code không hợp lệ", HttpStatus.NOT_FOUND),
+
 
     FILE_NOT_FOUND(3014, "Không tìm thấy file hoặc tin nhắn không chứa file", HttpStatus.NOT_FOUND),
     FILE_DOWNLOAD_ERROR(3015, "Lỗi khi tải file", HttpStatus.NOT_FOUND),

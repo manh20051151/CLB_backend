@@ -5,17 +5,13 @@ import iuh.fit.backend.Event.Entity.*;
 import iuh.fit.backend.Event.dto.request.EventCreateRequest;
 import iuh.fit.backend.Event.dto.request.EventUpdateRequest;
 import iuh.fit.backend.Event.dto.request.OrganizerRequest;
-import iuh.fit.backend.Event.dto.response.AttendeeResponse;
-import iuh.fit.backend.Event.dto.response.EventHistoryResponse;
-import iuh.fit.backend.Event.dto.response.EventResponse;
-import iuh.fit.backend.Event.dto.response.GroupChatResponse;
+import iuh.fit.backend.Event.dto.response.*;
 import iuh.fit.backend.Event.enums.EventProgressStatus;
 import iuh.fit.backend.Event.enums.EventStatus;
 import iuh.fit.backend.Event.enums.NotificationType;
 import iuh.fit.backend.Event.mapper.EventMapper;
 import iuh.fit.backend.Event.mapper.NewsMapper;
 import iuh.fit.backend.Event.repository.*;
-import iuh.fit.backend.identity.entity.Permission;
 import iuh.fit.backend.identity.entity.User;
 import iuh.fit.backend.identity.exception.AppException;
 import iuh.fit.backend.identity.exception.ErrorCode;
@@ -42,6 +38,7 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 @Slf4j
 public class EventService {
+    private final EventAttendeeRepository eventAttendeeRepository;
     private final EventHistoryRepository eventHistoryRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
@@ -1182,7 +1179,7 @@ public class EventService {
         log.info("Sent real-time notification to user {}", userId);
     }
 
-    @Scheduled(cron = "0/30 * * * * *")
+    @Scheduled(cron = "0 */5 * * * *")  // Chạy vào phút thứ 0,5,10,... mỗi giờ
     @Transactional
     public void updateEventStatuses() {
         LocalDateTime now = LocalDateTime.now();
@@ -1216,5 +1213,60 @@ public class EventService {
         event.setAvatarUrl(avatarUrl);
 
         return eventMapper.toEventResponse(eventRepository.save(event));
+    }
+
+    @Transactional
+    public AttendanceResponse checkInAttendee(String eventId, String qrCodeData) {
+        String userId = extractUserId(qrCodeData);
+
+        // 1. Validate event
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+
+        // 2. Validate event status (chỉ điểm danh khi event đang diễn ra)
+        if (event.getProgressStatus() != EventProgressStatus.ONGOING) {
+            throw new AppException(ErrorCode.EVENT_NOT_IN_PROGRESS);
+        }
+
+
+        // 4. Validate attendee from QR code
+        User attendee = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        // 5. Check attendance record
+        EventAttendee attendance = eventAttendeeRepository.findByEventAndUser(event, attendee)
+                .orElseThrow(() -> new AppException(ErrorCode.ATTENDEE_NOT_REGISTERED));
+
+        // 6. Check if already checked in
+        if (attendance.getCheckedInAt() != null) {
+            throw new AppException(ErrorCode.ATTENDEE_ALREADY_CHECKED_IN);
+        }
+
+        // 7. Process check-in
+        attendance.setCheckedInAt(LocalDateTime.now());
+        attendance.setAttending(true);
+        EventAttendee savedAttendance = eventAttendeeRepository.save(attendance);
+
+        // 8. Return detailed response
+        return AttendanceResponse.builder()
+                .eventId(event.getId())
+                .eventName(event.getName())
+                .attendeeId(attendee.getId())
+                .checkedInAt(savedAttendance.getCheckedInAt())
+                .build();
+    }
+    private String extractUserId(String qrCodeData) {
+        try {
+            // Tách chuỗi theo ký tự "|"
+            String[] parts = qrCodeData.split("\\|");
+
+            // Lấy phần chứa USER:UUID
+            String userPart = parts[0]; // "USER:f144b43a-fac2-4069-a366-33a168c79333"
+
+            // Trả về phần sau "USER:"
+            return userPart.substring(5); // "f144b43a-fac2-4069-a366-33a168c79333"
+        } catch (Exception e) {
+            throw new AppException(ErrorCode.INVALID_QR_FORMAT);
+        }
     }
 }

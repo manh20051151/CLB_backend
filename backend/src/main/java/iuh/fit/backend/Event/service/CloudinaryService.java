@@ -1,6 +1,7 @@
 package iuh.fit.backend.Event.service;
 
 import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,6 +30,17 @@ public class CloudinaryService {
         uploadedFile.delete(); // Xóa file tạm sau khi upload
 
         return (String) uploadResult.get("secure_url");
+    }
+
+    // Phương thức upload từ byte array
+    public String uploadImage(byte[] imageData, String folder) throws IOException {
+        Map<String, Object> uploadOptions = ObjectUtils.asMap(
+                "folder", folder,
+                "resource_type", "image"
+        );
+
+        Map<?, ?> uploadResult = cloudinary.uploader().upload(imageData, uploadOptions);
+        return uploadResult.get("url").toString();
     }
 
     private File convertMultiPartToFile(MultipartFile file) throws IOException {

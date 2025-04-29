@@ -1,9 +1,11 @@
 package iuh.fit.backend.identity.service;
 
+import com.google.zxing.WriterException;
 import iuh.fit.backend.Event.Entity.OrganizerRole;
 import iuh.fit.backend.Event.Entity.Position;
 import iuh.fit.backend.Event.repository.OrganizerRoleRepository;
 import iuh.fit.backend.Event.repository.PositionRepository;
+import iuh.fit.backend.Event.service.QrCodeService;
 import iuh.fit.backend.identity.dto.request.UserCreateRequest;
 import iuh.fit.backend.identity.dto.request.UserUpdateByUserRequest;
 import iuh.fit.backend.identity.dto.request.UserUpdateRequest;
@@ -31,6 +33,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -48,10 +51,11 @@ public class UserService {
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
 
+    QrCodeService qrCodeService;
     // Thêm constant cho avatar mặc định
     private static final String DEFAULT_AVATAR_URL =
             "https://res.cloudinary.com/dnvtmbmne/image/upload/v1744707484/et5vc9r9fejjgrjsvxyn.jpg";
-    public User createUser(UserCreateRequest request){
+    public User createUser(UserCreateRequest request) throws IOException, WriterException {
 
         if(userRepository.existsByUsername(request.getUsername())){
             throw new AppException(ErrorCode.USER_EXISTED);
@@ -75,10 +79,14 @@ public class UserService {
 
         user.setRoles(roles);
 
-
-
-        return userRepository.save(user);
+        User userResponse =   userRepository.save(user);
+        // Tạo QR code
+        String qrCodeUrl = qrCodeService.generateAndSaveQrCode(user.getId());
+        user.setQrCodeUrl(qrCodeUrl);
+        userResponse =   userRepository.save(user);
+        return userResponse;
     }
+
 
 //    @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> getUsers(){

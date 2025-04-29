@@ -9,10 +9,7 @@ import iuh.fit.backend.Event.dto.request.ChatMessageDto;
 import iuh.fit.backend.Event.dto.request.ChatMessageRequest;
 import iuh.fit.backend.Event.dto.request.EventCreateRequest;
 import iuh.fit.backend.Event.dto.request.EventUpdateRequest;
-import iuh.fit.backend.Event.dto.response.AttendeeResponse;
-import iuh.fit.backend.Event.dto.response.EventHistoryResponse;
-import iuh.fit.backend.Event.dto.response.EventResponse;
-import iuh.fit.backend.Event.dto.response.GroupChatResponse;
+import iuh.fit.backend.Event.dto.response.*;
 import iuh.fit.backend.Event.enums.EventStatus;
 import iuh.fit.backend.Event.repository.ChatMessageRepository;
 import iuh.fit.backend.Event.repository.EventRepository;
@@ -754,6 +751,19 @@ public class EventController {
 
         return ApiResponse.<EventResponse>builder()
                 .result(eventService.updateEventAvatar(eventId, file))
+                .build();
+    }
+
+    @PostMapping(value = "/{eventId}/check-in", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<AttendanceResponse> checkInAttendee(
+            @PathVariable String eventId,
+            @RequestParam("qrCodeData") String qrCodeData) {
+
+        AttendanceResponse response = eventService.checkInAttendee(eventId, qrCodeData);
+        return ApiResponse.<AttendanceResponse>builder()
+                .code(1000)
+                .message("Điểm danh thành công")
+                .result(response)
                 .build();
     }
 }

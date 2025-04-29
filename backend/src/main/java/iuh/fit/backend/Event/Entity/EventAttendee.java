@@ -6,6 +6,8 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.SQLRestriction;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -29,6 +31,9 @@ public class EventAttendee {
 
     boolean isAttending; // Trạng thái tham gia sự kiện
 
+    @Column(name = "checked_in_at")
+    @Temporal(TemporalType.TIMESTAMP)
+    private LocalDateTime checkedInAt; // Thời gian điểm danh
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

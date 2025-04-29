@@ -35,4 +35,5 @@ public class UserResponse {
     Date lockedAt;
     UserBriefResponse lockedBy;
     String lockReason;
+    String qrCodeUrl;
 }
