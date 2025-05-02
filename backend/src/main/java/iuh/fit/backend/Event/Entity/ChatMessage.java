@@ -17,7 +17,9 @@ import java.util.Date;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Table(name = "chat_messages")
-@SQLRestriction("(SELECT u.locked FROM user u WHERE u.id = user_id) = false")
+//@SQLRestriction("(SELECT u.locked FROM user u WHERE u.id = user_id) = false")
+//@SQLRestriction("(SELECT u.locked FROM User u WHERE u.id = sender.id) = false")
+@SQLRestriction("(SELECT u.locked FROM user u WHERE u.id = sender_id) = false")
 public class ChatMessage {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
