@@ -18,13 +18,19 @@ import iuh.fit.backend.identity.exception.ErrorCode;
 import iuh.fit.backend.identity.mapper.UserMapper;
 import iuh.fit.backend.identity.repository.RoleRepository;
 import iuh.fit.backend.identity.repository.UserRepository;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,6 +52,29 @@ public class UserService {
     private final OrganizerRoleRepository organizerRoleRepository;
     private final PositionRepository positionRepository;
 
+    private final JavaMailSender mailSender;
+//    private static final String EMAIL_SUBJECT = "Mật khẩu mới của bạn";
+//    private static final String EMAIL_CONTENT = "Mật khẩu mới của bạn là: %s";
+
+    private static final String EMAIL_SUBJECT = "Khôi phục mật khẩu";
+    private static final String EMAIL_CONTENT = """
+        <p>Xin chào,</p>
+        <p>Bạn đã yêu cầu khôi phục mật khẩu. Dưới đây là mật khẩu mới của bạn:</p>
+        <p><strong>%s</strong></p>
+        <p>Vui lòng đăng nhập và thay đổi mật khẩu ngay sau khi nhận được email này.</p>
+        <p>Trân trọng,</p>
+        <p>Hệ thống</p>
+        """;
+
+    // Thay đổi từ constructor parameters sang field injection
+//    @Value("${spring.mail.username}")
+//    private String fromEmail;
+//
+//    @Value("${email.subject.forgot-password}")
+//    private String emailSubject;
+//
+//    @Value("${email.content.forgot-password}")
+//    private String emailContent;
     UserRepository userRepository;
     RoleRepository roleRepository;
     UserMapper userMapper;
@@ -300,5 +329,50 @@ public class UserService {
     public Page<UserResponse> getLockedUsers(Pageable pageable) {
         return userRepository.findLockedUsers(pageable)
                 .map(userMapper::toUserResponse);
+    }
+
+    public void resetPassword(String username, String email) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (!user.getEmail().equalsIgnoreCase(email)) {
+            throw new AppException(ErrorCode.EMAIL_NOT_MATCH);
+        }
+
+        String newPassword = generateRandomPassword();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        sendNewPasswordEmail(user.getEmail(), newPassword);
+    }
+
+    private String generateRandomPassword() {
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder(8);
+        Random random = new Random();
+
+        for (int i = 0; i < 8; i++) {
+            int index = random.nextInt(characters.length());
+            sb.append(characters.charAt(index));
+        }
+
+        return sb.toString();
+    }
+
+    private void sendNewPasswordEmail(String toEmail, String newPassword) {
+        MimeMessage message = mailSender.createMimeMessage();
+
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setFrom("nguyenvietmanh1409@gmail.com");
+            helper.setTo(toEmail);
+            helper.setSubject(EMAIL_SUBJECT);
+            helper.setText(String.format(EMAIL_CONTENT, newPassword), true);
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            log.error("Failed to send email", e);
+            throw new AppException(ErrorCode.EMAIL_SENDING_FAILED);
+        }
     }
 }

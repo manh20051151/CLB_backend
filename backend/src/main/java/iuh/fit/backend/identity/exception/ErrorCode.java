@@ -56,6 +56,9 @@ public enum ErrorCode {
 
     //NOTIFICATION
     NOTIFICATION_NOT_FOUND(4002, "Lỗi không tìm thấy thông báo", HttpStatus.NOT_FOUND),
+    EMAIL_NOT_MATCH(4003, "Email không khớp với tài khoản", HttpStatus.NOT_FOUND),
+    INVALID_DATA(4004, "Data không hợp lệ", HttpStatus.NOT_FOUND),
+    EMAIL_SENDING_FAILED(4005, "Gửi email thất bại", HttpStatus.NOT_FOUND),
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

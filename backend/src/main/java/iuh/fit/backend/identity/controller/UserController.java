@@ -3,10 +3,7 @@ package iuh.fit.backend.identity.controller;
 import com.google.zxing.WriterException;
 import iuh.fit.backend.Event.service.CloudinaryService;
 import iuh.fit.backend.Event.service.QrCodeService;
-import iuh.fit.backend.identity.dto.request.ApiResponse;
-import iuh.fit.backend.identity.dto.request.UserCreateRequest;
-import iuh.fit.backend.identity.dto.request.UserUpdateByUserRequest;
-import iuh.fit.backend.identity.dto.request.UserUpdateRequest;
+import iuh.fit.backend.identity.dto.request.*;
 import iuh.fit.backend.identity.dto.response.UserResponse;
 import iuh.fit.backend.identity.entity.User;
 import iuh.fit.backend.identity.exception.AppException;
@@ -24,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -240,4 +238,20 @@ public class UserController {
             throw new AppException(ErrorCode.QR_CODE_GENERATION_FAILED);
         }
     }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request,
+            BindingResult bindingResult) {
+
+        if (bindingResult.hasErrors()) {
+            throw new AppException(ErrorCode.INVALID_DATA);
+        }
+
+        userService.resetPassword(request.getUsername(), request.getEmail());
+        return ApiResponse.<Void>builder()
+                .message("Mật khẩu mới đã được gửi đến email của bạn")
+                .build();
+    }
+
 }
