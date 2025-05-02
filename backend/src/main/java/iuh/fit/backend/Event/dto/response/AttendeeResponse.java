@@ -3,6 +3,8 @@ package iuh.fit.backend.Event.dto.response;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -14,6 +16,8 @@ public class AttendeeResponse {
      String firstName;
      String lastName;
      boolean isAttending;
+
+     LocalDateTime checkedInAt;
 
      public String getFullName() {
           return lastName + " " + firstName;

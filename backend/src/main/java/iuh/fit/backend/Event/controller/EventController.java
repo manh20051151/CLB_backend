@@ -17,6 +17,7 @@ import iuh.fit.backend.Event.repository.GroupChatRepository;
 import iuh.fit.backend.Event.service.CloudinaryService;
 import iuh.fit.backend.Event.service.EventExportService;
 import iuh.fit.backend.Event.service.EventService;
+import iuh.fit.backend.Event.service.QrCodeService;
 import iuh.fit.backend.identity.dto.request.ApiResponse;
 import iuh.fit.backend.identity.entity.User;
 import iuh.fit.backend.identity.exception.AppException;
@@ -40,6 +41,10 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -64,8 +69,10 @@ public class EventController {
     private final ChatMessageRepository chatMessageRepository;
 
     private final CloudinaryService cloudinaryService;
+
+    private final QrCodeService qrCodeService;
     @PostMapping
-    public ApiResponse<EventResponse> createEvent(@RequestBody EventCreateRequest request) {
+    public ApiResponse<EventResponse> createEvent(@RequestBody EventCreateRequest request) throws IOException {
         return ApiResponse.<EventResponse>builder()
                 .code(1000)
                 .message("Tạo sự kiện thành công")
@@ -765,5 +772,82 @@ public class EventController {
                 .message("Điểm danh thành công")
                 .result(response)
                 .build();
+    }
+
+    @PostMapping(value = "/{userId}/check-in-2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<AttendanceResponse> checkInAttendeeEvent(
+            @PathVariable String userId,
+            @RequestParam("qrCodeData") String qrCodeData) {
+
+        AttendanceResponse response = eventService.checkInAttendeeEvent(userId, qrCodeData);
+        return ApiResponse.<AttendanceResponse>builder()
+                .code(1000)
+                .message("Điểm danh thành công")
+                .result(response)
+                .build();
+    }
+
+    @GetMapping("/{eventId}/qr-code")
+    public ApiResponse<String> getUserQrCode(@PathVariable String eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+
+        if (event.getQrCodeUrl() == null) {
+            throw new AppException(ErrorCode.QR_CODE_NOT_GENERATED);
+        }
+
+        return ApiResponse.<String>builder()
+                .code(1000)
+                .message("Lấy QR code thành công")
+                .result(event.getQrCodeUrl())
+                .build();
+    }
+
+    // Hoặc nếu muốn trả về ảnh trực tiếp
+    @GetMapping("/{eventId}/qr-code-image")
+    public ResponseEntity<byte[]> getQrCodeImage(@PathVariable String eventId) throws IOException, InterruptedException {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+
+        if (event.getQrCodeUrl() == null) {
+            throw new AppException(ErrorCode.QR_CODE_NOT_GENERATED);
+        }
+
+        byte[] imageBytes = downloadQrCodeImage(event.getQrCodeUrl());
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"qr-code.png\"")
+                .body(imageBytes);
+    }
+
+    @PostMapping("/{eventId}/regenerate-qrcode")
+    public ApiResponse<String> regenerateQrCode(@PathVariable String eventId) {
+        try {
+            String newQrCodeUrl = qrCodeService.regenerateQrCodeEvent(eventId);
+            return ApiResponse.<String>builder()
+                    .code(1000)
+                    .message("Tạo lại QR code thành công")
+                    .result(newQrCodeUrl)
+                    .build();
+        } catch (Exception e) {
+            throw new AppException(ErrorCode.QR_CODE_GENERATION_FAILED);
+        }
+    }
+
+    private byte[] downloadQrCodeImage(String qrCodeUrl) throws IOException, InterruptedException {
+        // Sử dụng Java HttpClient để tải ảnh từ URL
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(qrCodeUrl))
+                .build();
+
+        HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+
+        if (response.statusCode() != 200) {
+            throw new IOException("Không thể tải QR code từ URL: " + qrCodeUrl);
+        }
+
+        return response.body();
     }
 }

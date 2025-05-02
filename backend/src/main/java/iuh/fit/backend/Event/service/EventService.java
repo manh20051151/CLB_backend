@@ -56,6 +56,8 @@ public class EventService {
     private final NewsMapper newsMapper;
     private final CloudinaryService cloudinaryService;
     private static final int DEFAULT_DURATION_MINUTES = 1440; // 1 ngày
+
+    private final QrCodeService qrCodeService;
 //    @Transactional
 //    public EventResponse createEvent(EventCreateRequest request) {
 //        validateEventRequest(request);
@@ -199,7 +201,7 @@ public class EventService {
 //    }
 
     @Transactional
-    public EventResponse createEvent(EventCreateRequest request) {
+    public EventResponse createEvent(EventCreateRequest request) throws IOException {
         validateEventRequest(request);
 
         // 1. Tạo event cơ bản (chưa có organizers)
@@ -277,6 +279,8 @@ public class EventService {
         // 7. Lưu lại event (cascade sẽ tự động lưu organizers và group chat)
         event = eventRepository.save(event);
 
+        String qrCodeUrl = qrCodeService.generateAndSaveQrCodeEvent(event.getId());
+        event.setQrCodeUrl(qrCodeUrl);
 
         // Gửi thông báo đến tất cả ADMIN khi tin tức mới được tạo
         List<User> admins = userRepository.findByRoles_Name("ADMIN");
@@ -375,7 +379,8 @@ public class EventService {
                         a.getUser().getUsername(),
                         a.getUser().getFirstName(),
                         a.getUser().getLastName(),
-                        a.isAttending()
+                        a.isAttending(),
+                        a.getCheckedInAt()
                 ))
                 .collect(Collectors.toList());
     }
@@ -1182,12 +1187,14 @@ public class EventService {
     }
 
     @Scheduled(cron = "0 */5 * * * *")  // Chạy vào phút thứ 0,5,10,... mỗi giờ
+//    @Scheduled(cron = "*/20 * * * * *")
     @Transactional
     public void updateEventStatuses() {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startTime = now.minusMinutes(DEFAULT_DURATION_MINUTES);
-
-        List<Event> eventsToUpdate = eventRepository.findEventsForStatusUpdate(startTime, now);
+//        LocalDateTime startTime = now.minusMinutes(DEFAULT_DURATION_MINUTES);
+        LocalDateTime startTime = now.minusMinutes(3000);
+        LocalDateTime enddTime = now.plusMinutes(3000);
+        List<Event> eventsToUpdate = eventRepository.findEventsForStatusUpdate(startTime, enddTime);
 
         eventsToUpdate.forEach(event -> {
             LocalDateTime endTime = event.getTime().plusMinutes(DEFAULT_DURATION_MINUTES);
@@ -1220,6 +1227,46 @@ public class EventService {
     @Transactional
     public AttendanceResponse checkInAttendee(String eventId, String qrCodeData) {
         String userId = extractUserId(qrCodeData);
+
+        // 1. Validate event
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+
+        // 2. Validate event status (chỉ điểm danh khi event đang diễn ra)
+        if (event.getProgressStatus() != EventProgressStatus.ONGOING) {
+            throw new AppException(ErrorCode.EVENT_NOT_IN_PROGRESS);
+        }
+
+
+        // 4. Validate attendee from QR code
+        User attendee = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        // 5. Check attendance record
+        EventAttendee attendance = eventAttendeeRepository.findByEventAndUser(event, attendee)
+                .orElseThrow(() -> new AppException(ErrorCode.ATTENDEE_NOT_REGISTERED));
+
+        // 6. Check if already checked in
+        if (attendance.getCheckedInAt() != null) {
+            throw new AppException(ErrorCode.ATTENDEE_ALREADY_CHECKED_IN);
+        }
+
+        // 7. Process check-in
+        attendance.setCheckedInAt(LocalDateTime.now());
+        attendance.setAttending(true);
+        EventAttendee savedAttendance = eventAttendeeRepository.save(attendance);
+
+        // 8. Return detailed response
+        return AttendanceResponse.builder()
+                .eventId(event.getId())
+                .eventName(event.getName())
+                .attendeeId(attendee.getId())
+                .checkedInAt(savedAttendance.getCheckedInAt())
+                .build();
+    }
+    @Transactional
+    public AttendanceResponse checkInAttendeeEvent(String userId, String qrCodeData) {
+        String eventId = extractUserId(qrCodeData);
 
         // 1. Validate event
         Event event = eventRepository.findById(eventId)

@@ -39,5 +39,7 @@ public class EventResponse {
 
     EventProgressStatus progressStatus;
     String avatarUrl;
+
+    String qrCodeUrl;
 }
 

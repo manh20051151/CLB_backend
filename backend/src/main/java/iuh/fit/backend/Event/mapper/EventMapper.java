@@ -150,7 +150,8 @@ public interface EventMapper {
                     user.getUsername(),
                     user.getFirstName(),
                     user.getLastName(),
-                    a.isAttending()
+                    a.isAttending(),
+                    a.getCheckedInAt()
             );
         }).collect(Collectors.toSet());
     }

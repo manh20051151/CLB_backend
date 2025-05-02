@@ -108,6 +108,12 @@ public class Event {
     @Column(name = "progress_status")
     private EventProgressStatus progressStatus;
 
+    @Column(name = "qr_code_url")
+    private String qrCodeUrl; // URL hình ảnh QR code
+
+    @Column(name = "qr_code_data")
+    private String qrCodeData; // Dữ liệu được mã hóa trong QR code (thường là userId)
+
 
     public boolean shouldUpdateStatus() {
         // Chỉ cập nhật nếu chưa ở trạng thái COMPLETED

@@ -4,9 +4,7 @@ import iuh.fit.backend.Event.Entity.Event;
 import iuh.fit.backend.Event.Entity.EventOrganizer;
 import iuh.fit.backend.Event.dto.response.AttendeeResponse;
 import iuh.fit.backend.identity.entity.User;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.core.io.FileSystemResource;
@@ -17,7 +15,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -429,18 +429,39 @@ public class EventExportService {
         headerRow.createCell(0).setCellValue("Họ và tên");
         headerRow.createCell(1).setCellValue("Mã số sinh viên");
         headerRow.createCell(2).setCellValue("Tham gia");
-
+        headerRow.createCell(3).setCellValue("Thời gian điểm danh");
         // Đổ dữ liệu
         int rowNum = 1;
+//        for (AttendeeResponse attendee : attendees) {
+//            Row row = sheet.createRow(rowNum++);
+//            row.createCell(0).setCellValue(attendee.getLastName() + " " + attendee.getFirstName());
+//            row.createCell(1).setCellValue(attendee.getStudentCode());
+//            row.createCell(2).setCellValue(attendee.isAttending() ? "Có" : "Không");
+//            row.createCell(3).setCellValue(attendee.getCheckedInAt());
+//        }
+        // Tạo một CellStyle để định dạng ngày giờ
+        CreationHelper createHelper = workbook.getCreationHelper();
+        CellStyle dateCellStyle = workbook.createCellStyle();
+        dateCellStyle.setDataFormat(createHelper.createDataFormat().getFormat("dd/MM/yyyy HH:mm:ss"));
+
         for (AttendeeResponse attendee : attendees) {
             Row row = sheet.createRow(rowNum++);
             row.createCell(0).setCellValue(attendee.getLastName() + " " + attendee.getFirstName());
             row.createCell(1).setCellValue(attendee.getStudentCode());
             row.createCell(2).setCellValue(attendee.isAttending() ? "Có" : "Không");
+
+            // Tạo cell cho thời gian và áp dụng định dạng
+            Cell dateCell = row.createCell(3);
+            if (attendee.getCheckedInAt() != null) {
+                dateCell.setCellValue(Date.from(attendee.getCheckedInAt().atZone(ZoneId.systemDefault()).toInstant()));
+                dateCell.setCellStyle(dateCellStyle);
+            } else {
+                dateCell.setCellValue(""); // hoặc "Chưa điểm danh" tùy yêu cầu
+            }
         }
 
         // Tự động điều chỉnh độ rộng cột
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             sheet.autoSizeColumn(i);
         }
 
