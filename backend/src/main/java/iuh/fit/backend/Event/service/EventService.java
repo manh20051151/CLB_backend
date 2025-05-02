@@ -210,10 +210,12 @@ public class EventService {
         // 2. Lưu event trước để có ID
         event = eventRepository.save(event);
 
+        User userCreatedBy = userRepository.findById(request.getCreatedBy())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         // 3. Tạo organizers và thiết lập quan hệ với event
         Set<EventOrganizer> organizers = new HashSet<>();
         Set<User> allMembers = new HashSet<>(); // Để dùng cho group chat
-
+        allMembers.add(userCreatedBy);
         for (OrganizerRequest organizerRequest : request.getOrganizers()) {
             User user = userRepository.findById(organizerRequest.getUserId())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
