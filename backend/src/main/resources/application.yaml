@@ -14,9 +14,9 @@ socketio:
   port: 9099
 spring:
   datasource:
-    url: "jdbc:mysql://localhost:3306/db_club"
-    username: root
-    password: root
+    url: "jdbc:mysql://database-1.ctya60eks8ps.ap-southeast-2.rds.amazonaws.com:3306/db_club?useSSL=true&requireSSL=true"
+    username: admin
+    password: mypassword
   jpa:
     hibernate:
       ddl-auto: update
