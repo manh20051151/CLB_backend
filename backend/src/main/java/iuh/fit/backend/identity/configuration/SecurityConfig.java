@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers("/socket.io/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/events/status/notoken").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/notoken/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/news/status/notoken").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/forgot-password/**").permitAll()
 //                        .requestMatchers(HttpMethod.GET, "/users").hasRole(Role.ADMIN.name())
                         .anyRequest().authenticated());

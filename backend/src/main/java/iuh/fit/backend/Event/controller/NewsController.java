@@ -73,6 +73,16 @@ public class NewsController {
                 .build();
     }
 
+    @GetMapping("/status/notoken")
+    public ApiResponse<List<NewsResponse>> getNewsByStatusNoToken(
+            @RequestParam(required = false) NewsStatus status) {
+        return ApiResponse.<List<NewsResponse>>builder()
+                .code(1000)
+                .message("Lấy danh sách tin tức thành công")
+                .result(newsService.getNewsByStatus(status))
+                .build();
+    }
+
     // Phiên bản phân trang
     @GetMapping("/status/paged")
     public ApiResponse<Page<NewsResponse>> getNewsByStatusPaged(
