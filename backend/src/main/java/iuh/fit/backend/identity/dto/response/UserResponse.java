@@ -36,4 +36,5 @@ public class UserResponse {
     UserBriefResponse lockedBy;
     String lockReason;
     String qrCodeUrl;
+    Date joinedDate;
 }

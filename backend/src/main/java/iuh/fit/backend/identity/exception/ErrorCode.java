@@ -47,6 +47,7 @@ public enum ErrorCode {
     QR_CODE_NOT_GENERATED(3018, "QR_CODE chưa được tạo", HttpStatus.NOT_FOUND),
     QR_CODE_GENERATION_FAILED(3019, "QR_CODE thất bại", HttpStatus.NOT_FOUND),
     INVALID_QR_FORMAT(3020, "Định dạng QR code không hợp lệ", HttpStatus.NOT_FOUND),
+    EVENT_ATTENDEE_LIMIT_REACHED(3021, "Sự kiện đã đạt số lượng người tham gia tối đa", HttpStatus.NOT_FOUND),
 
 
     FILE_NOT_FOUND(3014, "Không tìm thấy file hoặc tin nhắn không chứa file", HttpStatus.NOT_FOUND),
@@ -67,8 +68,8 @@ public enum ErrorCode {
         this.statusCode = statusCode;
     }
 
-    private int code;
-    private String message;
-    private HttpStatusCode statusCode;
+    private final int code;
+    private final String message;
+    private final HttpStatusCode statusCode;
 
 }

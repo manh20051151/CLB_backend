@@ -204,6 +204,13 @@ public class UserService {
                     .map(Optional::get)
                     .collect(Collectors.toSet());
             user.setRoles(roles);
+            // Kiểm tra nếu roles có chứa USER và joinedDate chưa được thiết lập
+            boolean hasUserRole = roles.stream()
+                    .anyMatch(role -> "USER".equalsIgnoreCase(role.getName()));
+
+            if (hasUserRole && user.getJoinedDate() == null) {
+                user.setJoinedDate(new Date());
+            }
         }
 
         return userMapper.toUserResponse(userRepository.save(user));

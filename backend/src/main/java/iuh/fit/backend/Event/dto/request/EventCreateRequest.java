@@ -40,5 +40,6 @@ public class EventCreateRequest {
     //    Set<String> participants; // Danh sách ID của thành phần tham dự
     Set<OrganizerRequest> participants; // Danh sách ID của thành phần tham dự
     Set<String> permissions;
+    Integer maxAttendees;
 }
 

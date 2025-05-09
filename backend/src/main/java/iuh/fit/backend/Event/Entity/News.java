@@ -120,8 +120,7 @@ public class News {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof News)) return false;
-        News news = (News) o;
+        if (!(o instanceof News news)) return false;
         return id != null && id.equals(news.id);
     }
 

@@ -41,13 +41,14 @@ public class Event {
     String id;
 
     String name;
+    @Column(columnDefinition = "TEXT")
     String purpose;
 
     @Temporal(TemporalType.TIMESTAMP)
     LocalDateTime time;
 
     String location;
-
+    @Column(columnDefinition = "TEXT")
     String content;
     @Column(name = "avatar_url")
     @Builder.Default
@@ -115,6 +116,41 @@ public class Event {
     private String qrCodeData; // Dữ liệu được mã hóa trong QR code (thường là userId)
 
 
+    // Thêm các trường mới liên quan đến số lượng người tham gia
+    @Column(name = "max_attendees")
+    private Integer maxAttendees; // Số lượng người tham gia tối đa
+
+    @Column(name = "current_attendees_count", nullable = false)
+    @Builder.Default
+    private Integer currentAttendeesCount = 0; // Số lượng người đã tham gia hiện tại
+
+
+    // Phương thức kiểm tra còn chỗ trống không
+    public boolean hasAvailableSlots() {
+        if (maxAttendees == null) {
+            return true; // Không giới hạn số lượng
+        }
+        return currentAttendeesCount < maxAttendees;
+    }
+
+    // Phương thức tăng số lượng người tham gia
+    public void incrementAttendeesCount() {
+        if (this.currentAttendeesCount == null) {
+            this.currentAttendeesCount = 0;
+        }
+        this.currentAttendeesCount++;
+    }
+
+    // Phương thức giảm số lượng người tham gia
+    public void decrementAttendeesCount() {
+        if (this.currentAttendeesCount == null) {
+            this.currentAttendeesCount = 0;
+        } else if (this.currentAttendeesCount > 0) {
+            this.currentAttendeesCount--;
+        }
+    }
+
+
     public boolean shouldUpdateStatus() {
         // Chỉ cập nhật nếu chưa ở trạng thái COMPLETED
         return this.progressStatus != EventProgressStatus.COMPLETED;
@@ -180,8 +216,7 @@ public class Event {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Event)) return false;
-        Event event = (Event) o;
+        if (!(o instanceof Event event)) return false;
         return id != null && id.equals(event.id);
     }
 

@@ -278,7 +278,6 @@ public class EventService {
 
         // 7. Lưu lại event (cascade sẽ tự động lưu organizers và group chat)
         event = eventRepository.save(event);
-
         String qrCodeUrl = qrCodeService.generateAndSaveQrCodeEvent(event.getId());
         event.setQrCodeUrl(qrCodeUrl);
 
@@ -392,10 +391,18 @@ public class EventService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
+
+        // Kiểm tra còn chỗ trống không nếu có giới hạn
+        if (event.getMaxAttendees() != null &&
+                event.getCurrentAttendeesCount() >= event.getMaxAttendees()) {
+            throw new AppException(ErrorCode.EVENT_ATTENDEE_LIMIT_REACHED);
+        }
+
         EventAttendee attendee = new EventAttendee();
         attendee.setEvent(event);
         attendee.setUser(user);
         attendee.setAttending(false); // Mặc định tham gia
+        event.incrementAttendeesCount(); // Tăng số lượng người tham gia
 
         event.getAttendees().add(attendee);
 
@@ -422,7 +429,7 @@ public class EventService {
                 .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
 
         event.getAttendees().removeIf(attendee -> attendee.getUser().getId().equals(userId));
-
+        event.decrementAttendeesCount(); // Giảm số lượng người tham gia
         event = eventRepository.save(event);
         return eventMapper.toEventResponse(event);
     }
@@ -675,8 +682,7 @@ public class EventService {
                 existingEvent.getOrganizers().add(organizer);
 
                 // Thêm user vào group chat nếu chưa có
-                if (existingEvent.getGroupChat() != null &&
-                        !existingEvent.getGroupChat().getMembers().contains(user)) {
+                if (existingEvent.getGroupChat() != null) {
                     existingEvent.getGroupChat().getMembers().add(user);
                 }
             }
@@ -712,8 +718,7 @@ public class EventService {
                 existingEvent.getParticipants().add(participant);
 
                 // Thêm user vào group chat nếu chưa có
-                if (existingEvent.getGroupChat() != null &&
-                        !existingEvent.getGroupChat().getMembers().contains(user)) {
+                if (existingEvent.getGroupChat() != null) {
                     existingEvent.getGroupChat().getMembers().add(user);
                 }
             }

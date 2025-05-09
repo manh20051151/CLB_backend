@@ -37,8 +37,7 @@ public class EventAttendee {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof EventAttendee)) return false;
-        EventAttendee that = (EventAttendee) o;
+        if (!(o instanceof EventAttendee that)) return false;
         return id != null && id.equals(that.id);
     }
 

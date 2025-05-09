@@ -103,7 +103,7 @@ public class EventController {
             Event event = eventRepository.findById(eventId)
                     .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Không tìm thấy sự kiện"));
 
-            Resource fileResource = (Resource) eventExportService.exportEventToWordFile(event);
+            Resource fileResource = eventExportService.exportEventToWordFile(event);
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,

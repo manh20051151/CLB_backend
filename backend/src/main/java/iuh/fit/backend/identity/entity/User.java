@@ -70,6 +70,11 @@ public class User {
     @Column(name = "qr_code_data")
     private String qrCodeData; // Dữ liệu được mã hóa trong QR code (thường là userId)
 
+
+    @Column(name = "joined_date")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date joinedDate; // Ngày tham gia hệ thống
+
     // Phương thức khóa tài khoản
     public void lock(User lockedByUser, String reason) {
         this.locked = true;
@@ -89,8 +94,7 @@ public class User {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof User)) return false;
-        User user = (User) o;
+        if (!(o instanceof User user)) return false;
         return id != null && id.equals(user.id);
     }
 

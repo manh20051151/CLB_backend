@@ -41,5 +41,7 @@ public class EventResponse {
     String avatarUrl;
 
     String qrCodeUrl;
+    Integer maxAttendees;
+    Integer currentAttendeesCount;
 }
 

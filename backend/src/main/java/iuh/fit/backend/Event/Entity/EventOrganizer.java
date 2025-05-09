@@ -43,8 +43,7 @@ public class EventOrganizer {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof EventOrganizer)) return false;
-        EventOrganizer that = (EventOrganizer) o;
+        if (!(o instanceof EventOrganizer that)) return false;
         return id != null && id.equals(that.id);
     }
 
