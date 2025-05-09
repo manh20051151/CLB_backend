@@ -206,7 +206,6 @@ public class Event {
         this.deletedBy = deletedByUser;
 
         // Nếu cần, có thể đặt lại status khi xóa
-//        this.status = EventStatus.CANCELLED;
     }
 
     @PrePersist

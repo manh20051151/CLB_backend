@@ -29,6 +29,8 @@ public interface EventRepository extends JpaRepository<Event, String> {
     List<Event> findByAttendeeId(@Param("userId") String userId);
 
     // Thêm method này để query các event đã xóa (ghi đè @Where clause)
+
+
     @Query(value = "SELECT * FROM event WHERE deleted = true", nativeQuery = true)
     Page<Event> findByDeletedTrue(Pageable pageable);
 

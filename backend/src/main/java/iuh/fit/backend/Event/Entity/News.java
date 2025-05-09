@@ -45,7 +45,8 @@ public class News {
     @Column(columnDefinition = "TEXT")
     String content; // Nội dung tin tức (có thể chứa HTML)
 
-    @ManyToOne(fetch = FetchType.LAZY)
+//    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "event_id")
     Event event; // Tin tức có thể thuộc về 1 Event hoặc null nếu là tin độc lập
 

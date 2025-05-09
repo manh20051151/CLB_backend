@@ -60,7 +60,12 @@ public interface NewsRepository extends JpaRepository<News, String> {
 
     // Query đặc biệt để lấy tin đã xóa (ghi đè @Where clause)
 
-    @Query(value = "SELECT * FROM news WHERE deleted = true", nativeQuery = true)
+//    @Query(value = "SELECT * FROM news WHERE deleted = true", nativeQuery = true)
+@Query(value = """
+    SELECT * FROM news 
+    WHERE deleted = true
+    AND (event_id IS NULL OR event_id IN (SELECT e.id FROM event e))
+    """, nativeQuery = true)
     Page<News> findByDeletedTrue(Pageable pageable);
 
     // Query đặc biệt để tìm kiếm cả tin đã xóa
