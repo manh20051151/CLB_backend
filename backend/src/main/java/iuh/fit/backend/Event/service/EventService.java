@@ -223,8 +223,8 @@ public class EventService {
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
             allMembers.add(user); // Thêm vào danh sách thành viên chat
 
-//            OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
-//                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+            OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
+                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
 //            Position position = positionRepository.findById(organizerRequest.getPositionId())
 //                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
 
@@ -378,7 +378,7 @@ public class EventService {
                         a.getUser().getUsername(),
                         a.getUser().getFirstName(),
                         a.getUser().getLastName(),
-                        a.isAttending(),
+                        a.getIsAttending(),
                         a.getCheckedInAt()
                 ))
                 .collect(Collectors.toList());
@@ -401,7 +401,7 @@ public class EventService {
         EventAttendee attendee = new EventAttendee();
         attendee.setEvent(event);
         attendee.setUser(user);
-        attendee.setAttending(false); // Mặc định tham gia
+        attendee.setIsAttending(null); // Mặc định tham gia
         event.incrementAttendeesCount(); // Tăng số lượng người tham gia
 
         event.getAttendees().add(attendee);
@@ -445,7 +445,7 @@ public class EventService {
 
         if (optionalAttendee.isPresent()) {
             EventAttendee attendee = optionalAttendee.get();
-            attendee.setAttending(isAttending); // Chỉ cập nhật trạng thái của attendee đó
+            attendee.setIsAttending(isAttending); // Chỉ cập nhật trạng thái của attendee đó
         } else {
             throw new AppException(ErrorCode.ATTENDEE_NOT_FOUND);
         }
@@ -1258,7 +1258,7 @@ public class EventService {
 
         // 7. Process check-in
         attendance.setCheckedInAt(LocalDateTime.now());
-        attendance.setAttending(true);
+        attendance.setIsAttending(true);
         EventAttendee savedAttendance = eventAttendeeRepository.save(attendance);
 
         // 8. Return detailed response
@@ -1298,7 +1298,7 @@ public class EventService {
 
         // 7. Process check-in
         attendance.setCheckedInAt(LocalDateTime.now());
-        attendance.setAttending(true);
+        attendance.setIsAttending(true);
         EventAttendee savedAttendance = eventAttendeeRepository.save(attendance);
 
         // 8. Return detailed response

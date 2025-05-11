@@ -15,7 +15,7 @@ public class AttendeeResponse {
      String studentCode;
      String firstName;
      String lastName;
-     boolean isAttending;
+     Boolean isAttending;
 
      LocalDateTime checkedInAt;
 

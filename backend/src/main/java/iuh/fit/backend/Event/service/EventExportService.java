@@ -448,8 +448,11 @@ public class EventExportService {
             Row row = sheet.createRow(rowNum++);
             row.createCell(0).setCellValue(attendee.getLastName() + " " + attendee.getFirstName());
             row.createCell(1).setCellValue(attendee.getStudentCode());
-            row.createCell(2).setCellValue(attendee.isAttending() ? "Có" : "Không");
-
+//            row.createCell(2).setCellValue(attendee.getIsAttending() ? "Có" : "Không");
+            row.createCell(2).setCellValue(
+                    attendee.getIsAttending() == null ? "Chưa điểm danh" :
+                            attendee.getIsAttending() ? "Có" : "Không"
+            );
             // Tạo cell cho thời gian và áp dụng định dạng
             Cell dateCell = row.createCell(3);
             if (attendee.getCheckedInAt() != null) {

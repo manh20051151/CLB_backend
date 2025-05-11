@@ -29,7 +29,7 @@ public class EventAttendee {
     @JoinColumn(name = "user_id", nullable = false)
     User user;
 
-    boolean isAttending; // Trạng thái tham gia sự kiện
+    Boolean isAttending; // Trạng thái tham gia sự kiện
 
     @Column(name = "checked_in_at")
     @Temporal(TemporalType.TIMESTAMP)
