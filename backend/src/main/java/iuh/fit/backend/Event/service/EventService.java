@@ -231,7 +231,7 @@ public class EventService {
             EventOrganizer organizer = EventOrganizer.builder()
                     .event(event)
                     .user(user)
-                    .organizerRole(user.getOrganizerRole())
+                    .organizerRole(role)
                     .position(user.getPosition())
                     .build();
 
@@ -329,6 +329,19 @@ public class EventService {
                 .map(eventMapper::toEventResponse)
                 .collect(Collectors.toList());
     }
+
+    public EventResponse getEventById(String id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+
+        // Initialize lazy-loaded collections if needed
+        Hibernate.initialize(event.getPermissions());
+        Hibernate.initialize(event.getOrganizers());
+        Hibernate.initialize(event.getParticipants());
+        Hibernate.initialize(event.getAttendees());
+
+        return eventMapper.toEventResponse(event);
+    }
     private Set<EventOrganizer> mapOrganizersByRequests(Set<OrganizerRequest> organizers, Event event) {
         if (organizers == null || organizers.isEmpty()) {
             return Collections.emptySet();
@@ -350,15 +363,15 @@ public class EventService {
                     .build();
         }).collect(Collectors.toSet());
     }
-    @Transactional(readOnly = true)
-    public Optional<EventResponse> getEventById(String eventId) {
-        return eventRepository.findById(eventId)
-                .map(event -> {
-                    Hibernate.initialize(event.getPermissions());
-                    Hibernate.initialize(event.getOrganizers());
-                    return eventMapper.toEventResponse(event);
-                });
-    }
+//    @Transactional(readOnly = true)
+//    public Optional<EventResponse> getEventById(String eventId) {
+//        return eventRepository.findById(eventId)
+//                .map(event -> {
+//                    Hibernate.initialize(event.getPermissions());
+//                    Hibernate.initialize(event.getOrganizers());
+//                    return eventMapper.toEventResponse(event);
+//                });
+//    }
 
     @Transactional(readOnly = true)
     public List<AttendeeResponse> getEventAttendees(String eventId, Boolean isAttending) {

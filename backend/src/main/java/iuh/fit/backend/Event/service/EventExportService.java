@@ -478,4 +478,102 @@ public class EventExportService {
 
         return new FileSystemResource(tempFile);
     }
+
+    public Resource exportAttendeesToExcel(List<AttendeeResponse> attendees, Event event) throws IOException {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Danh sách attendees");
+
+        // Tạo style cho tiêu đề sự kiện
+        CellStyle eventInfoStyle = workbook.createCellStyle();
+        Font eventInfoFont = workbook.createFont();
+        eventInfoFont.setBold(true);
+        eventInfoFont.setFontHeightInPoints((short) 12);
+        eventInfoStyle.setFont(eventInfoFont);
+
+        // Tạo style cho header
+        CellStyle headerStyle = workbook.createCellStyle();
+        Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerStyle.setFont(headerFont);
+
+        // Tạo style cho định dạng ngày giờ
+        CreationHelper createHelper = workbook.getCreationHelper();
+        CellStyle dateCellStyle = workbook.createCellStyle();
+        dateCellStyle.setDataFormat(createHelper.createDataFormat().getFormat("dd/MM/yyyy HH:mm:ss"));
+
+        // Thêm thông tin sự kiện
+        int rowNum = 0;
+        Row eventNameRow = sheet.createRow(rowNum++);
+        eventNameRow.createCell(0).setCellValue("Tên sự kiện:");
+        Cell eventNameCell = eventNameRow.createCell(1);
+        eventNameCell.setCellValue(event.getName());
+        eventNameCell.setCellStyle(eventInfoStyle);
+
+        Row eventTimeRow = sheet.createRow(rowNum++);
+        eventTimeRow.createCell(0).setCellValue("Thời gian:");
+        Cell eventTimeCell = eventTimeRow.createCell(1);
+        if (event.getTime() != null) {
+            eventTimeCell.setCellValue(Date.from(event.getTime().atZone(ZoneId.systemDefault()).toInstant()));
+            eventTimeCell.setCellStyle(dateCellStyle);
+        }
+
+        Row createdByRow = sheet.createRow(rowNum++);
+        createdByRow.createCell(0).setCellValue("Người tạo:");
+        Cell createdByCell = createdByRow.createCell(1);
+        createdByCell.setCellValue(event.getCreatedBy().getFirstName() + "" + event.getCreatedBy().getLastName());
+        createdByCell.setCellStyle(eventInfoStyle);
+
+
+        Row eventLocationRow = sheet.createRow(rowNum++);
+        eventLocationRow.createCell(0).setCellValue("Tên địa điểm:");
+        Cell eventLocationCell = eventLocationRow.createCell(1);
+        eventLocationCell.setCellValue(event.getLocation());
+        eventLocationCell.setCellStyle(eventInfoStyle);
+
+        // Thêm một dòng trống
+        rowNum++;
+
+        // Tạo header cho danh sách attendees
+        Row headerRow = sheet.createRow(rowNum++);
+        String[] headers = {"Họ và tên", "Mã số sinh viên", "Tham gia", "Thời gian điểm danh"};
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+        }
+
+        // Đổ dữ liệu attendees
+        for (AttendeeResponse attendee : attendees) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(attendee.getLastName() + " " + attendee.getFirstName());
+            row.createCell(1).setCellValue(attendee.getStudentCode());
+            row.createCell(2).setCellValue(
+                    attendee.getIsAttending() == null ? "Chưa điểm danh" :
+                            attendee.getIsAttending() ? "Có" : "Không"
+            );
+
+            Cell dateCell = row.createCell(3);
+            if (attendee.getCheckedInAt() != null) {
+                dateCell.setCellValue(Date.from(attendee.getCheckedInAt().atZone(ZoneId.systemDefault()).toInstant()));
+                dateCell.setCellStyle(dateCellStyle);
+            } else {
+                dateCell.setCellValue("");
+            }
+        }
+
+        // Tự động điều chỉnh độ rộng cột
+        for (int i = 0; i < headers.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        // Ghi ra file tạm
+        File tempFile = File.createTempFile("attendees_", ".xlsx");
+        try (FileOutputStream outputStream = new FileOutputStream(tempFile)) {
+            workbook.write(outputStream);
+        } finally {
+            workbook.close();
+        }
+
+        return new FileSystemResource(tempFile);
+    }
 }

@@ -88,6 +88,15 @@ public class EventController {
                 .result(eventService.getAllEvents())
                 .build();
     }
+
+    @GetMapping("/{id}")
+    public ApiResponse<EventResponse> getEventById(@PathVariable String id) {
+        return ApiResponse.<EventResponse>builder()
+                .code(1000)
+                .message("Lấy thông tin sự kiện theo id thành công")
+                .result(eventService.getEventById(id))
+                .build();
+    }
 //    @GetMapping("/guest")
 //    public ApiResponse<List<EventResponse>> getEventsByGuest() {
 //        return ApiResponse.<List<EventResponse>>builder()
@@ -273,8 +282,11 @@ public class EventController {
     @GetMapping("/{eventId}/attendees/export")
     public ResponseEntity<Resource> exportAttendeesToExcel(@PathVariable String eventId) throws IOException {
         List<AttendeeResponse> attendees = eventService.getEventAttendees(eventId, null);
-        Resource file = eventExportService.exportAttendeesToExcel(attendees);
 
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new AppException(ErrorCode.EVENT_NOT_FOUND));
+//        Resource file = eventExportService.exportAttendeesToExcel(attendees);
+        Resource file = eventExportService.exportAttendeesToExcel(attendees, event);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"attendees_list_" + eventId + ".xlsx\"")
