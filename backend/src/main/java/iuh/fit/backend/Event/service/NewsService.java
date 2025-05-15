@@ -330,7 +330,7 @@ public class NewsService {
 
     private void saveNewsChanges(News oldNews, News newNews, User updatedBy) {
         List<NewsHistory> changes = new ArrayList<>();
-
+        newNews.setStatus(NewsStatus.PENDING);
         // Kiểm tra từng trường thay đổi
         if (!Objects.equals(oldNews.getTitle(), newNews.getTitle())) {
             changes.add(createHistoryRecord(newNews, "title",
