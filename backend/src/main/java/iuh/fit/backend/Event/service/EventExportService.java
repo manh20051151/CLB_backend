@@ -2,6 +2,7 @@ package iuh.fit.backend.Event.service;
 
 import iuh.fit.backend.Event.Entity.Event;
 import iuh.fit.backend.Event.Entity.EventOrganizer;
+import iuh.fit.backend.Event.Entity.EventParticipant;
 import iuh.fit.backend.Event.dto.response.AttendeeResponse;
 import iuh.fit.backend.identity.entity.User;
 import org.apache.poi.ss.usermodel.*;
@@ -70,6 +71,9 @@ public class EventExportService {
 
         // Ban tổ chức
         createOrganizersSection(document, event.getOrganizers());
+
+        // Người tham dự
+        createParticipantsSection(document, event.getParticipants());
 
         // Thành phần tham dự chi tiết
 //        createDetailedParticipantsSection(document, event.getAttendees(), event.getParticipants());
@@ -311,19 +315,57 @@ public class EventExportService {
         sectionRun.setBold(true);
         sectionRun.setFontFamily(FONT_FAMILY);
 
-//        addEmptyLine(sectionRun, 1);
-
         for (EventOrganizer organizer : organizers) {
             XWPFParagraph orgPara = document.createParagraph();
             orgPara.setIndentationLeft(400);
 
             XWPFRun orgRun = orgPara.createRun();
-            orgRun.setText("- " + organizer.getUser().getLastName()  + " - " + organizer.getOrganizerRole().getName() + " - " + organizer.getPosition().getName());
+
+            String roleName = organizer.getOrganizerRole() != null ?
+                    organizer.getOrganizerRole().getName() : "Không có vai trò";
+
+            String positionName = organizer.getPosition() != null ?
+                    organizer.getPosition().getName() : "Không có chức vụ";
+
+            orgRun.setText(String.format("- %s - %s - %s",
+                    organizer.getUser().getLastName(),
+                    roleName,
+                    positionName));
             orgRun.setFontFamily(FONT_FAMILY);
         }
-
-//        addEmptyLine(sectionPara.createRun(), 2);
     }
+
+    private void createParticipantsSection(XWPFDocument document, Set<EventParticipant> participants) {
+        // Tạo phần tiêu đề cho danh sách người tham gia
+        XWPFParagraph sectionPara = document.createParagraph();
+
+        XWPFRun sectionRun = sectionPara.createRun();
+        sectionRun.setText("6. Người tham gia");
+        sectionRun.setBold(true);
+        sectionRun.setFontFamily(FONT_FAMILY);
+
+        // Thêm từng người tham gia vào danh sách
+        for (EventParticipant participant : participants) {
+            XWPFParagraph participantPara = document.createParagraph();
+            participantPara.setIndentationLeft(400);
+
+            XWPFRun participantRun = participantPara.createRun();
+
+            String roleName = participant.getOrganizerRole() != null ?
+                    participant.getOrganizerRole().getName() : "Không có vai trò";
+
+            String positionName = participant.getPosition() != null ?
+                    participant.getPosition().getName() : "Không có chức vụ";
+
+            participantRun.setText(String.format("- %s - %s - %s",
+                    participant.getUser().getLastName(),
+                    roleName,
+                    positionName));
+            participantRun.setFontFamily(FONT_FAMILY);
+        }
+    }
+
+
 
 //    private void createDetailedParticipantsSection(XWPFDocument document, Set<User> attendees, Set<User> participants) {
 //        XWPFParagraph sectionPara = document.createParagraph();

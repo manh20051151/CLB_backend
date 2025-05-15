@@ -223,8 +223,16 @@ public class EventService {
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
             allMembers.add(user); // Thêm vào danh sách thành viên chat
 
-            OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
-                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+//            OrganizerRole role = organizerRoleRepository.findById(organizerRequest.getRoleId())
+//                    .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+
+            // Xử lý role (cho phép null)
+            OrganizerRole role = null;
+            if (organizerRequest.getRoleId() != null) {
+                role = organizerRoleRepository.findById(organizerRequest.getRoleId())
+                        .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+            }
+
 //            Position position = positionRepository.findById(organizerRequest.getPositionId())
 //                    .orElseThrow(() -> new AppException(ErrorCode.POSITION_NOT_FOUND));
 
