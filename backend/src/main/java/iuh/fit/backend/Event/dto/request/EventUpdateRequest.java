@@ -21,5 +21,6 @@ public class EventUpdateRequest {
     Set<OrganizerRequest> organizers;
     Set<OrganizerRequest> participants;
     Set<String> permissions;
+    Integer maxAttendees;
 }
 

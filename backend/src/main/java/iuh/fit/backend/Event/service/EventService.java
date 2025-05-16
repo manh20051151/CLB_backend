@@ -672,6 +672,7 @@ public class EventService {
         existingEvent.setTime(request.getTime());
         existingEvent.setLocation(request.getLocation());
         existingEvent.setContent(request.getContent());
+        existingEvent.setMaxAttendees(request.getMaxAttendees());
 
         // 4. Xử lý organizers - không clear() mà xóa từng phần tử riêng lẻ
         // Xóa organizers không còn trong request
